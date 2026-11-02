@@ -43,6 +43,9 @@ so it reads the same for every user. Lower-confidence lines:
 - **Turkish:** informal "sen". Loanwords kept on purpose because Turkish calisthenics communities use
   them: *core*, *set*, *muscle-up*, *dead bug*, *hollow hold*, *false grip*. Please confirm or
   replace (e.g. *core* → *karın ve gövde*). "Barfiks" is used for pull-up; "bar" for the pull-up bar.
+- **Russian, changed in phase 9 to stay gender-neutral** — please confirm they read naturally:
+  mood «Без сил» (was «Устал»), «Недавно была отмечена боль. Сегодня полегче…» (was «ты отметил»),
+  «Этот путь пройден до конца.» (was «Ты прошёл…»). Also «кор» for *core* in the muscle list.
 - **Data and update texts (phase 8, YOU → Data, TODAY banners):** export / import / merge /
   replace / snapshot / reset / storage-protection / update strings. Terms to confirm:
   RU «снимок» for snapshot, «хранилище защищено» for storage protection, «объединить» / «заменить»;

@@ -154,3 +154,18 @@ Due when there is at least one workout and 30 days have passed since the latest 
 
 ### D48 · Settings save instantly; YOU is code-split
 Every YOU control saves on change (the name on blur / Enter, with a quiet "Saved") — no Save buttons, no confirmation dialogs for reversible changes. Days-per-week changes go through the rhythm history (D29), so past weeks keep their labels. "Save new max" adds a self-reported entry for strict pull-ups; the value shown is the current working max (latest setup answer / self-report / max test, raised by any later strict set, see `domain/level.ts`) with its source. YOU, import and the snapshot sheets are lazy chunks, keeping the initial JS well under budget.
+
+### D49 · QA is automated, not eyeballed
+`qa.spec.ts` walks 22 real states at five widths, at 130 % text and in RU / TR, and fails on things a person would notice: sideways scrolling, elements outside the screen or cut off, touch targets under 48 px, axe-core WCAG 2.2 AA / best-practice violations, English words on a RU / TR screen. Deliberate exceptions are structural, not per-element: horizontal scrollers (topic chips), visually hidden text, ellipsis. 130 % text is simulated with `html { font-size: 130% }`, which works because every size is in rem. The mixed-language detector compares visible words with everything the target language's texts contain (UI, exercises, thoughts, Intl month / weekday names), so no allow-list has to be maintained.
+
+### D50 · Single-choice chip groups follow the ARIA radio pattern
+One Tab stop (the selected chip); arrow keys, Home and End move and select. Multi-select chips (equipment, goals) and the mood row stay toggle buttons with `aria-pressed` — each is its own Tab stop, Space toggles, the mood can be cleared again.
+
+### D51 · Accessible names start with the visible label
+Buttons whose visible text is an abbreviation keep it at the start of their name ("−15 s (15 seconds less rest)"), so voice control ("tap minus 15 s") and screen readers agree (WCAG 2.5.3). Every screen has a level-one heading (on the rest screen "Rest", on a thought its topic) and all content sits in landmarks (the workout screen is one `main`).
+
+### D52 · Russian stays gender-neutral for the user; Isa's welcome stays verbatim
+UI and thoughts never address the user in a gendered past tense ("Без сил", not "Устал"; "Недавно была отмечена боль", not "ты отметил"). The welcome text is Isa's own words from the specification and is not edited. Muscle lists are joined with ", " in every language (`Intl.ListFormat`'s unit style drops the commas in RU / TR).
+
+### D53 · Lighthouse runs locally, not as a dependency
+Lighthouse is ~100 MB of tooling for an occasional check, so it is run with `npx` against `npm run preview` (README). In containers Chrome needs `--disable-dev-shm-usage` (a small `/dev/shm` otherwise yields "NO_FCP"). Lighthouse 12+ has no PWA category; installability is covered by Chrome's own `Page.getInstallabilityErrors` in `pwa.spec.ts`.

@@ -27,9 +27,28 @@ React + TypeScript (strict) + Vite, installable PWA, local data only (IndexedDB)
 
 On Windows PowerShell with a custom browser: `$env:CHROMIUM_PATH="C:\path\to\chrome.exe"; npm run e2e`.
 
+What the end-to-end specs cover: `onboarding`, `workout`, `progress`, `thoughts`, `poster`,
+`data` (export / import / snapshots / reset), `pwa` (installability, offline, updates),
+`qa` (every main state at 360 / 390 / 430 / 768 / 1280 px and 130 % text: no sideways
+scrolling, nothing cut off, targets ≥ 48 px, axe-core audit, no English left on RU / TR
+screens) and `a11y` (keyboard-only loop with focus rings, reduced motion).
+
 `e2e/pwa.spec.ts` checks installability, offline use and a real service-worker update: it
 copies the e2e build to a temporary folder, serves it from its own static server on a
 free port, modifies `sw.js` to simulate the next release and removes the folder afterwards.
+
+### Lighthouse (optional, not a dependency)
+
+```bash
+npm run build && npm run preview
+npx lighthouse http://localhost:4173/ --chrome-flags="--headless=new --disable-dev-shm-usage" --view
+```
+
+`--disable-dev-shm-usage` is only needed in containers with a small `/dev/shm`. The last run
+(mobile profile) is saved in `docs/lighthouse/first-launch-mobile.html`.
+
+`npm audit` reports moderate advisories in build-time tooling only (glob / minimatch /
+deepmerge under the PWA build plugin); `npm audit --omit=dev` — what ships — finds none.
 
 ## Data safety
 
@@ -87,4 +106,6 @@ not contain it.
 - `DECISIONS.md` — non-obvious decisions.
 - `IDEAS.md` — everything deliberately left out of v1.
 - `CONTENT-REVIEW.md` — phrases that need review by a native speaker.
+- `docs/screenshots/` — TODAY, WORKOUT, COMPLETION, PROGRESS, THOUGHTS, POSTER in EN / RU / TR
+  (390 × 844, 2×) and poster samples; `docs/lighthouse/` — the last Lighthouse report.
 - `src/data/thoughts.ts` — the 90 PULLUP PRO ORIGINALS (EN/RU/TR); rules in `src/data/thoughts.test.ts`.
