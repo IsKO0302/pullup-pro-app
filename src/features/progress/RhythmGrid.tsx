@@ -18,9 +18,11 @@ export function RhythmGrid({ weeks }: { weeks: readonly RhythmWeek[] }) {
         </ol>
         <ol className="rhythm__weeks">
           {weeks.map((w) => {
-            const counts = w.recovery > 0
-              ? t('progress.rhythmWeekRecovery', { done: w.done, planned: w.planned, r: w.recovery })
-              : t('progress.rhythmWeek', { done: w.done, planned: w.planned });
+            const counts = [
+              t('progress.rhythmWeek', { done: w.done, planned: w.planned }),
+              w.recoveryPlanned > 0 ? t('progress.rhythmRecovery', { done: w.recoveryDone, planned: w.recoveryPlanned }) : null,
+              w.restChosen > 0 ? t('progress.rhythmRest', { n: w.restChosen }) : null,
+            ].filter(Boolean).join(' · ');
             const label = w.status === 'none'
               ? `${t('progress.weekOf', { date: short(w.start) })}: —`
               : `${t('progress.weekOf', { date: short(w.start) })}${w.status === 'current' ? ` (${t('progress.thisWeek')})` : ''}: ${counts}`;

@@ -1,19 +1,23 @@
 import { isTraining, type History } from './history';
-import { scheduledOn } from './schedule';
-import { weekDates, type LocalDate } from './time';
-import type { DayType, Profile } from './types';
+import { scheduleRange, type DaySchedule } from './rotation';
+import type { ScheduleProfile } from './schedule';
+import { weekDates, weekStart, type LocalDate } from './time';
+import type { DayType, RotationState } from './types';
 
 /**
- * done = trained (or did the planned recovery session) · recovery = the user chose
- * to rest (counts toward the rhythm, never "missed") · rest = planned rest ·
- * planned = coming up · today = not done yet · missed = a past training day with
- * nothing logged (shown neutrally as "not trained").
+ * done = trained (or did the recovery session) · recovery = the user chose to
+ * rest (never "missed"; the session waits for the next training day) · rest =
+ * planned rest, a recovery day that passed quietly, or a training day after this
+ * week's training was already done · planned = coming up · today = not done yet
+ * · missed = a past training day with nothing logged (shown neutrally as "not
+ * trained").
  */
 export type DayState = 'done' | 'today' | 'planned' | 'rest' | 'recovery' | 'missed';
 
 export interface DayCell {
   date: LocalDate;
   state: DayState;
+  /** Planned session that day (null = rest). */
   scheduled: DayType | null;
   isToday: boolean;
 }
@@ -26,8 +30,10 @@ export function trainedOn(history: Pick<History, 'workouts'>, date: LocalDate): 
 export interface DayIndex {
   /** Days with a training or recovery-mobility session. */
   done: ReadonlySet<LocalDate>;
-  /** Days with a real training session (counts toward the rhythm). */
+  /** Days with a real training session (counts toward the weekly training target). */
   trained: ReadonlySet<LocalDate>;
+  /** Days with a recovery-mobility session. */
+  recoverySessions: ReadonlySet<LocalDate>;
   /** Days the user chose to rest. */
   recovery: ReadonlySet<LocalDate>;
 }
@@ -35,31 +41,46 @@ export interface DayIndex {
 export function indexDays(history: Pick<History, 'workouts' | 'recoveryDays'>): DayIndex {
   const done = new Set<LocalDate>();
   const trained = new Set<LocalDate>();
+  const recoverySessions = new Set<LocalDate>();
   for (const w of history.workouts) {
     if (isTraining(w)) trained.add(w.localDate);
+    if (w.type === 'recovery') recoverySessions.add(w.localDate);
     if (isTraining(w) || w.type === 'recovery') done.add(w.localDate);
   }
-  return { done, trained, recovery: new Set(history.recoveryDays.map((r) => r.localDate)) };
+  return { done, trained, recoverySessions, recovery: new Set(history.recoveryDays.map((r) => r.localDate)) };
 }
 
-type ScheduleProfile = Pick<Profile, 'daysPerWeek' | 'rhythmChanges' | 'startDate'>;
-
-export function dayStateIn(index: DayIndex, profile: ScheduleProfile, date: LocalDate, today: LocalDate): DayCell {
-  const scheduled = scheduledOn(profile, date);
-  const cell = (state: DayState): DayCell => ({ date, state, scheduled, isToday: date === today });
+export function cellOf(index: DayIndex, day: DaySchedule, today: LocalDate): DayCell {
+  const { date } = day;
+  const cell = (state: DayState): DayCell => ({ date, state, scheduled: day.type, isToday: date === today });
   if (index.done.has(date)) return cell('done');
   if (index.recovery.has(date)) return cell('recovery');
-  if (date === today) return cell(scheduled === null ? 'rest' : 'today');
-  if (date > today) return cell(scheduled === null ? 'rest' : 'planned');
-  return cell(scheduled === null || scheduled === 'recovery' ? 'rest' : 'missed');
+  const active = !day.beforeStart && day.kind !== 'rest';
+  if (date === today) return cell(active ? 'today' : 'rest');
+  if (date > today) return cell(active ? 'planned' : 'rest');
+  return cell(active && day.kind === 'training' ? 'missed' : 'rest');
 }
 
-export function dayState(profile: ScheduleProfile, history: History, date: LocalDate, today: LocalDate): DayCell {
-  return dayStateIn(indexDays(history), profile, date, today);
-}
-
-/** Monday–Sunday of the week containing `today`. */
-export function weekStrip(profile: ScheduleProfile, history: History, today: LocalDate): DayCell[] {
+/** Monday–Sunday of the week containing `today` (later days are projected from the plan). */
+export function weekStrip(
+  profile: ScheduleProfile,
+  history: Pick<History, 'workouts' | 'recoveryDays'>,
+  today: LocalDate,
+  checkpoint?: RotationState | null,
+): DayCell[] {
   const index = indexDays(history);
-  return weekDates(today).map((d) => dayStateIn(index, profile, d, today));
+  const dates = weekDates(today);
+  const days = scheduleRange(profile, history, weekStart(today), dates[6]!, today, checkpoint);
+  return days.map((d) => cellOf(index, d, today));
+}
+
+/** One day's cell (same rules as the week strip). */
+export function dayState(
+  profile: ScheduleProfile,
+  history: Pick<History, 'workouts' | 'recoveryDays'>,
+  date: LocalDate,
+  today: LocalDate,
+  checkpoint?: RotationState | null,
+): DayCell {
+  return cellOf(indexDays(history), scheduleRange(profile, history, date, date, today, checkpoint)[0]!, today);
 }

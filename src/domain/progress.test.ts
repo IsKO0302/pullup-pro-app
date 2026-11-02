@@ -80,20 +80,37 @@ describe('rhythmWeeks', () => {
   it('a week with every planned day trained is on plan; planned rest is part of the plan', () => {
     const h = history({ workouts: [MON, TUE, THU, FRI].map((d) => workoutOf(d, 'push', [['pushup', [10]]])) });
     const [week] = rhythmWeeks(profile, h, addDays(MON, 7), 2).slice(0, 1);
-    expect(week).toMatchObject({ start: MON, planned: 4, done: 4, recovery: 0, status: 'onPlan' });
+    expect(week).toMatchObject({ start: MON, planned: 4, done: 4, recoveryPlanned: 0, recoveryDone: 0, restChosen: 0, status: 'onPlan' });
     expect(week!.days.map((d) => d.state)).toEqual(['done', 'done', 'rest', 'done', 'done', 'rest', 'rest']);
   });
 
-  it('a chosen recovery day counts toward the plan, a silent gap does not', () => {
+  it('a chosen rest day is shown as rest, not missed — but only training counts toward the target', () => {
     const base = [MON, TUE, THU].map((d) => workoutOf(d, 'push', [['pushup', [10]]]));
     const withRecovery = history({ workouts: base, recoveryDays: [recoveryDay(FRI, 'tired')] });
     const [a] = rhythmWeeks(profile, withRecovery, addDays(MON, 7), 2);
-    expect(a).toMatchObject({ planned: 4, done: 3, recovery: 1, status: 'onPlan' });
+    expect(a).toMatchObject({ planned: 4, done: 3, restChosen: 1, status: 'partial' });
     expect(a!.days[4]!.state).toBe('recovery');
 
     const [b] = rhythmWeeks(profile, history({ workouts: base }), addDays(MON, 7), 2);
-    expect(b).toMatchObject({ planned: 4, done: 3, recovery: 0, status: 'partial' });
+    expect(b).toMatchObject({ planned: 4, done: 3, restChosen: 0, status: 'partial' });
     expect(b!.days[4]!.state).toBe('missed');
+  });
+
+  it('recovery sessions are counted on their own and never toward the training target', () => {
+    const five = makeProfile({ startDate: START, daysPerWeek: 5 });
+    const SAT = addDays(MON, 5);
+    const training = [MON, TUE, THU, FRI].map((d) => workoutOf(d, 'push', [['pushup', [10]]]));
+    const recovery = workoutOf(SAT, 'recovery', [['cat-cow', [8]]]);
+    const [full] = rhythmWeeks(five, history({ workouts: [...training, recovery] }), addDays(MON, 7), 2);
+    expect(full).toMatchObject({ planned: 4, done: 4, recoveryPlanned: 1, recoveryDone: 1, status: 'onPlan' });
+    expect(full!.days[5]!.state).toBe('done');
+    // Recovery instead of a training session: 3 of 4 training, still partial.
+    const [swapped] = rhythmWeeks(five, history({ workouts: [...training.slice(0, 3), recovery] }), addDays(MON, 7), 2);
+    expect(swapped).toMatchObject({ planned: 4, done: 3, recoveryDone: 1, status: 'partial' });
+    // A recovery slot that passes quietly is rest, not "missed".
+    const [quiet] = rhythmWeeks(five, history({ workouts: training }), addDays(MON, 7), 2);
+    expect(quiet).toMatchObject({ planned: 4, done: 4, recoveryDone: 0, status: 'onPlan' });
+    expect(quiet!.days[5]!.state).toBe('rest');
   });
 
   it('a session brought forward to a rest day counts as done', () => {

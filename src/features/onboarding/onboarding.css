@@ -93,6 +93,7 @@
 .setup__note { color: var(--text-2); min-height: 3em; text-align: center; margin: 0; }
 .setup__group { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
 .setup__label { margin: 0; font-size: 14px; color: var(--text-2); }
+.setup__split { margin: 0; }
 .setup__foot {
   position: sticky;
   bottom: 0;

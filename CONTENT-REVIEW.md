@@ -51,12 +51,21 @@ so it reads the same for every user. Lower-confidence lines:
   RU «снимок» for snapshot, «хранилище защищено» for storage protection, «объединить» / «заменить»;
   TR «anlık kopya» for snapshot, «depolama koruması», «birleştir» / «yerine koy», «dışa / içe aktar».
   These texts explain data safety, so clarity matters more than elegance.
+- **v2 scheduler and safety texts** (setup / YOU rhythm, TODAY, PROGRESS weekly rhythm, equipment):
+  «Активных дней в неделю» / «Haftada aktif gün» (the setting now counts recovery days too), the
+  split line «4 тренировки + 1 день восстановления» / «4 antrenman + 1 toparlanma günü» (RU plurals
+  `plural.trainingSessions.*`, `plural.recoveryDays.*`), «Тренировки этой недели выполнены…» /
+  «Bu haftanın antrenmanları tamam…», «Дальше: {name}, {day}» / «Sıradaki: {name}, {day}» (weekday
+  in the nominative — «Дальше: Тяга · Сила, четверг»), the rest sheet «…перейдёт на следующий
+  тренировочный день» / «…bir sonraki antrenman gününe kayar», week labels «тренировки: 2 из 4 ·
+  выбран отдых: 1» / «antrenman: 2 / 4 · seçilen dinlenme: 1». Equipment: «Устойчивая опора (ящик,
+  ступенька)» / «Sağlam kutu veya basamak» — is "stable box or step" the natural term?
 - Labels written in English in every language by design: `PULLUP PRO`, `PULLUP PRO ORIGINALS`,
   `YOU VS. YOU.`
 
 ## 3. Exercise texts (`src/data/exercises/text.{en,ru,tr}.ts`) — DECISIONS D15
 
-44 exercises × 3 languages: name, 3 technique cues, one common mistake, safety notes for demanding or
+46 exercises × 3 languages: name, 3 technique cues, one common mistake, safety notes for demanding or
 optional exercises. Written from general calisthenics knowledge — **not** by a certified coach or
 physiotherapist; the app shows them as general guidance with no medical claims. To review:
 
@@ -65,3 +74,10 @@ physiotherapist; the app shows them as general guidance with no medical claims. 
 - Safety wording on bench dips and shoulder dislocates (both optional; the notes say to switch to an
   alternative if anything pinches and to stay in a pain-free range) in all three languages.
 - Muscle-up progression cues (false grip, transition) — technical accuracy.
+- **New in v2 (beginner safety, DECISIONS D61):** *Feet-supported hang* («Вис с опорой ногами» /
+  «Ayak destekli asılma») and *Feet-assisted pull-up* («Подтягивания с опорой ногами» / «Ayak destekli
+  barfiks»); the negative pull-up now starts from a stable box and carries the safety note "Never jump
+  into a negative. Stop the set when you can no longer slow down." (RU «Никогда не запрыгивай в
+  негатив…», TR «Negatife asla zıplayarak girme…»); path step «Next: 5 slow negatives in one set, 3
+  seconds or more each, stepping up from a stable box.» A coach should confirm the readiness rule
+  (30 s hang + 10 scapular pull-ups, or 8 band-assisted reps, before the first negative).

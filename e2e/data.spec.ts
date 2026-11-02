@@ -47,8 +47,10 @@ test('export → reset (two confirmations) → restore from the file: the identi
   await seeded(page);
   const text = await exportFile(page);
   const file = JSON.parse(text);
-  expect(file).toMatchObject({ format: 'pullup-pro-export', schemaVersion: 2, exportedLocalDate: TODAY });
+  expect(file).toMatchObject({ format: 'pullup-pro-export', schemaVersion: 3, exportedLocalDate: TODAY });
   expect(file.data.workouts.length).toBeGreaterThan(20);
+  // The scheduler checkpoint travels with the file (it is re-checked against the history on load).
+  expect(file.data.rotation).toMatchObject({ rules: expect.any(Number), trainingRotationIndex: expect.any(Number) });
   expect(file.summary.workouts).toBe(file.data.workouts.length);
   await expect(page.getByTestId('last-export')).toContainText('18 March 2026');
   const afterExport = await dumpDb(page);

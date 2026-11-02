@@ -1,11 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { checkpointFor, sameRotation } from '../domain/rotation';
 import {
   emptyAppData,
   type ActiveSession, type AppData, type CompletedWorkout, type MaxEntry, type Meta, type Profile,
-  type RecentThought, type RecoveryDay, type Settings, type ThoughtDay,
+  type RecentThought, type RecoveryDay, type RotationState, type Settings, type ThoughtDay,
 } from '../domain/types';
 import { DEFAULT_DB_NAME, openDb, StorageError } from '../storage/db';
 import * as repo from '../storage/repo';
+import type { LocalDate } from '../domain/time';
+import { todayLocal, useToday } from './clock';
 
 export type StoreStatus = { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; detail: string };
 
@@ -25,6 +28,8 @@ export interface StoreActions {
   saveThoughtDay: (d: ThoughtDay) => Promise<boolean>;
   saveFavorites: (ids: string[]) => Promise<boolean>;
   saveRecent: (list: RecentThought[]) => Promise<boolean>;
+  /** Stores the rotation checkpoint (kept up to date by the provider itself). */
+  saveRotation: (r: RotationState | null) => Promise<boolean>;
   /**
    * Import / reset / restore: ONE transaction that snapshots the current data
    * first, then writes `transform(current)`. Memory is re-read from disk after.
@@ -49,6 +54,16 @@ export interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+/**
+ * The rotation checkpoint that belongs to `data` today, or `undefined` when the
+ * stored one is already right (nothing to write).
+ */
+export function freshRotation(data: AppData, today: LocalDate): RotationState | null | undefined {
+  const profile = data.profile;
+  const next = profile && profile.onboarding === 'done' ? checkpointFor(profile, data, today, data.active, data.rotation) : null;
+  return sameRotation(next, data.rotation) ? undefined : next;
+}
+
 export function describeError(err: unknown): string {
   if (err instanceof StorageError) return `${err.code}: ${err.message}`;
   if (err instanceof Error) return err.message;
@@ -69,7 +84,14 @@ export function StoreProvider({ dbName, children }: { dbName: string; children: 
     openDb(dbName)
       .then(async (db) => {
         opened = db;
-        const loaded = await repo.loadAll(db);
+        let loaded = await repo.loadAll(db);
+        // The checkpoint is brought up to date BEFORE the app is ready, so no write
+        // races with what the user does next.
+        const rotation = freshRotation(loaded, todayLocal());
+        if (rotation !== undefined) {
+          await (rotation ? repo.putKv(db, 'rotation', rotation) : repo.deleteKv(db, 'rotation'));
+          loaded = { ...loaded, rotation };
+        }
         if (cancelled) return;
         dbRef.current = db;
         dataRef.current = loaded;
@@ -148,6 +170,10 @@ export function StoreProvider({ dbName, children }: { dbName: string; children: 
     ),
     saveFavorites: (ids) => run((db) => repo.putKv(db, 'favorites', ids), (d) => ({ ...d, favorites: ids })),
     saveRecent: (list) => run((db) => repo.putKv(db, 'recent', list), (d) => ({ ...d, recent: list })),
+    saveRotation: (r) => run(
+      (db) => (r ? repo.putKv(db, 'rotation', r) : repo.deleteKv(db, 'rotation')),
+      (d) => ({ ...d, rotation: r }),
+    ),
     applyData: (reason, transform) => {
       const task = queue.current.then(async (): Promise<ApplyOutcome> => {
         const db = dbRef.current;
@@ -182,6 +208,17 @@ export function StoreProvider({ dbName, children }: { dbName: string; children: 
       setData(loaded);
     },
   }), [run]);
+
+  // Keeps the checkpoint current: a new day, an edited history or an import moves it.
+  const today = useToday();
+  const ready = status.kind === 'ready';
+  const { profile, workouts, recoveryDays, rotation } = data;
+  const openSince = data.active?.localDate ?? null;
+  useEffect(() => {
+    if (!ready) return;
+    const next = freshRotation({ ...dataRef.current, profile, workouts, recoveryDays, rotation }, today);
+    if (next !== undefined) void actions.saveRotation(next);
+  }, [ready, profile, workouts, recoveryDays, rotation, openSince, today, actions]);
 
   // Only dev/e2e builds running on a SEPARATE database get the demo-data hook; production never does.
   useEffect(() => {

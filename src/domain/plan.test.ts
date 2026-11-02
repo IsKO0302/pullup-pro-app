@@ -5,12 +5,26 @@ import {
 } from '../test/fixtures';
 import { estimateSeconds } from './duration';
 import { workingMax } from './level';
-import { FACTORS, RESERVE_REPS, lastSlotLog, musclesOf, planDay, returnFactor, sessionMinutesFor, targetRange } from './plan';
-import { addDays } from './time';
-import type { CompletedWorkout, PlannedExercise, Workout } from './types';
+import { FACTORS, RESERVE_REPS, buildSession, lastSlotLog, musclesOf, planDay, returnFactor, sessionMinutesFor, targetRange } from './plan';
+import type { Variant } from './plan';
+import { daysPerWeekOn, planTemplate } from './schedule';
+import { addDays, weekdayIndex } from './time';
+import type { History } from './history';
+import type { CompletedWorkout, DayType, PlannedExercise, Profile, Workout } from './types';
 
 const L2 = history({ maxEntries: [maxEntry(5)] });
 const bar = makeProfile();
+
+/**
+ * The session the plan template puts on this weekday (light on rest days), built
+ * without walking the rotation: lets slot and progression tests use hand-made
+ * histories the rotation would never produce.
+ */
+function planOn(profile: Profile, h: History, date: string, opts: { variant?: Exclude<Variant, 'early'>; feelingOff?: boolean } = {}): Workout {
+  const variant = opts.variant ?? 'planned';
+  const type: DayType = variant === 'planned' ? planTemplate(daysPerWeekOn(profile, date))[weekdayIndex(date)] ?? 'light' : variant;
+  return buildSession(profile, h, date, type, opts);
+}
 
 /** Re-dates a completed workout (to build histories the rotation would not produce). */
 function on(w: CompletedWorkout, localDate: string, type = w.type): CompletedWorkout {
@@ -20,12 +34,12 @@ function on(w: CompletedWorkout, localDate: string, type = w.type): CompletedWor
 
 /** Adds a legs/core session two days before `next`, so a test history has no 7-day break. */
 function filled(h: ReturnType<typeof history>, next: string): ReturnType<typeof history> {
-  const legs = on(complete(planDay(bar, L2, addDays(WEEK1, 4))), addDays(next, -2), 'legsCore');
+  const legs = on(complete(planOn(bar, L2, addDays(WEEK1, 4))), addDays(next, -2), 'legsCore');
   return { ...h, workouts: [...h.workouts, legs] };
 }
 
 function slotLog(slot: string, ex: Omit<PlannedExercise, 'slot'>, actuals: (number | null)[], date = WEEK1, flags: Partial<CompletedWorkout['flags']> = {}, swappedFrom: CompletedWorkout['exercises'][number]['swappedFrom'] = null): CompletedWorkout {
-  const plan = planDay(bar, L2, date);
+  const plan = planOn(bar, L2, date);
   const base = complete(plan);
   const p: PlannedExercise = { ...ex, slot, sets: actuals.length };
   return {
@@ -38,37 +52,49 @@ function slotLog(slot: string, ex: Omit<PlannedExercise, 'slot'>, actuals: (numb
 
 describe('planDay — basics', () => {
   it('follows the weekly rotation and offers a light session on planned rest days', () => {
-    const types = Array.from({ length: 7 }, (_, i) => planDay(bar, L2, addDays(WEEK1, i)).type);
-    expect(types).toEqual(['pullStrength', 'push', 'light', 'pullVolume', 'legsCore', 'light', 'light']);
+    const h = simulate(bar, L2, START, 14);
+    const week1 = h.workouts.filter((w) => w.localDate >= WEEK1).map((w) => [weekdayIndex(w.localDate), w.type]);
+    expect(week1).toEqual([[0, 'pullStrength'], [1, 'push'], [3, 'pullVolume'], [4, 'legsCore']]);
+    for (const d of [2, 5, 6]) expect(planDay(bar, h, addDays(WEEK1, d)).type).toBe('light');
+  });
+
+  it('a training day without a session keeps its workout for the next training day', () => {
+    // Nothing logged in week 1: Tuesday still offers Monday's strength session.
+    expect(planDay(bar, L2, WEEK1).type).toBe('pullStrength');
+    expect(planDay(bar, L2, addDays(WEEK1, 1)).type).toBe('pullStrength');
   });
 
   it('is deterministic and does not mutate its inputs', () => {
     const h = simulate(bar, L2, START, 14);
     const snapshot = JSON.stringify(h);
-    const a = planDay(bar, h, addDays(START, 14));
-    const b = planDay(bar, h, addDays(START, 14));
+    const a = planOn(bar, h, addDays(START, 14));
+    const b = planOn(bar, h, addDays(START, 14));
     expect(a).toEqual(b);
     expect(JSON.stringify(h)).toBe(snapshot);
   });
 
-  it('starts at level 0 when no max was given (most conservative)', () => {
-    const w = planDay(bar, history(), WEEK1);
+  it('starts at level 0 when no max was given (most conservative, no negatives yet)', () => {
+    const w = planOn(bar, history(), WEEK1);
     expect(w.level).toBe(0);
-    expect(w.exercises[0]!.exerciseId).toBe('negative-pullup');
+    expect(w.exercises[0]!.exerciseId).toBe('australian-row');
+    const box = planOn(makeProfile({ equipment: ['bar', 'box'] }), history(), WEEK1);
+    expect(box.exercises[0]!.exerciseId).toBe('feet-assisted-pullup');
+    expect([...w.exercises, ...box.exercises].some((e) => e.exerciseId === 'negative-pullup')).toBe(false);
   });
 
   it('uses only max entries recorded up to the planned date', () => {
     const h = history({ maxEntries: [maxEntry(5), maxEntry(12, addDays(WEEK1, 3), 'self')] });
-    expect(planDay(bar, h, WEEK1).level).toBe(2);
-    expect(planDay(bar, h, addDays(WEEK1, 7)).level).toBe(3);
+    expect(planOn(bar, h, WEEK1).level).toBe(2);
+    expect(planOn(bar, h, addDays(WEEK1, 7)).level).toBe(3);
   });
 
   it('"Train anyway" on a rest day brings the next planned workout forward', () => {
-    const saturday = addDays(WEEK1, 5);
-    const early = planDay(bar, L2, saturday, { variant: 'early' });
+    const upToTuesday = simulate(bar, L2, START, 9);
+    expect(planDay(bar, upToTuesday, addDays(WEEK1, 2), { variant: 'early' }).type).toBe('pullVolume');
+    const fullWeek = simulate(bar, L2, START, 12);
+    const early = planDay(bar, fullWeek, addDays(WEEK1, 5), { variant: 'early' });
     expect(early.type).toBe('pullStrength');
     expect(early.flags.maxTestSuggested).toBe(false);
-    expect(planDay(bar, L2, addDays(WEEK1, 2), { variant: 'early' }).type).toBe('pullVolume');
   });
 
   it('sizes sessions by type', () => {
@@ -84,7 +110,7 @@ describe('planDay — basics', () => {
       const profile = makeProfile({ sessionMinutes: 45 });
       let h = simulate(profile, history({ maxEntries: [maxEntry(max)] }), START, 42);
       h = { ...h, workouts: h.workouts.filter((w) => w.type !== 'maxTest') };
-      for (const w of [planDay(profile, h, addDays(START, 42)), planDay(profile, h, addDays(START, 45))]) {
+      for (const w of [planOn(profile, h, addDays(START, 42)), planOn(profile, h, addDays(START, 45))]) {
         for (const e of w.exercises.filter((x) => x.exerciseId === 'strict-pullup')) {
           expect(e.target, `max ${max}`).toBeLessThanOrEqual(Math.max(1, max - RESERVE_REPS));
         }
@@ -110,91 +136,92 @@ describe('planDay — basics', () => {
 
 describe('planDay — progression (double progression per slot)', () => {
   it('adds a rep when every set hit its target', () => {
-    const w1 = planDay(bar, L2, WEEK1);
+    const w1 = planOn(bar, L2, WEEK1);
     const h = filled(history({ maxEntries: L2.maxEntries, workouts: [complete(w1)] }), addDays(WEEK1, 7));
-    const w2 = planDay(bar, h, addDays(WEEK1, 7));
+    const w2 = planOn(bar, h, addDays(WEEK1, 7));
     expect(find(w2, 'row')!.target).toBe(find(w1, 'row')!.target + 1);
     expect(find(w2, 'core')!.target).toBe(find(w1, 'core')!.target + 1);
   });
 
   it('adds 5 seconds for time-based slots', () => {
-    const push = planDay(bar, L2, addDays(WEEK1, 1));
+    const push = planOn(bar, L2, addDays(WEEK1, 1));
     const plank = find(push, 'core')!;
     expect(EXERCISES[plank.exerciseId].unit).toBe('seconds');
     const h = filled(history({ maxEntries: L2.maxEntries, workouts: [complete(push)] }), addDays(WEEK1, 8));
-    expect(find(planDay(bar, h, addDays(WEEK1, 8)), 'core')!.target).toBe(plank.target + 5);
+    expect(find(planOn(bar, h, addDays(WEEK1, 8)), 'core')!.target).toBe(plank.target + 5);
   });
 
   it('steps back one rep when two or more sets were missed by 2+ or skipped', () => {
     const row: Omit<PlannedExercise, 'slot'> = { exerciseId: 'australian-row', sets: 3, target: 8, restSec: 75, role: 'accessory' };
     for (const actuals of [[8, 5, 5], [8, null, null], [6, 6, 8]]) {
       const h = filled(history({ maxEntries: L2.maxEntries, workouts: [slotLog('pullStrength.row', row, actuals)] }), addDays(WEEK1, 7));
-      expect(find(planDay(bar, h, addDays(WEEK1, 7)), 'row')!.target, String(actuals)).toBe(7);
+      expect(find(planOn(bar, h, addDays(WEEK1, 7)), 'row')!.target, String(actuals)).toBe(7);
     }
     const h = filled(history({ maxEntries: L2.maxEntries, workouts: [slotLog('pullStrength.row', row, [8, 7, 7])] }), addDays(WEEK1, 7));
-    expect(find(planDay(bar, h, addDays(WEEK1, 7)), 'row')!.target).toBe(8);
+    expect(find(planOn(bar, h, addDays(WEEK1, 7)), 'row')!.target).toBe(8);
   });
 
   it('moves to the next harder variation at the top of the range', () => {
     const push: Omit<PlannedExercise, 'slot'> = { exerciseId: 'pushup', sets: 4, target: 25, restSec: 90, role: 'main' };
     const h = filled(history({ maxEntries: L2.maxEntries, workouts: [slotLog('push.main', push, [25, 25, 25, 25])] }), addDays(WEEK1, 8));
-    const next = planDay(bar, h, addDays(WEEK1, 8));
+    const next = planOn(bar, h, addDays(WEEK1, 8));
     expect(next.exercises[0]).toMatchObject({ exerciseId: 'diamond-pushup', target: EXERCISES['diamond-pushup'].start });
     expect(next.exercises.filter((e) => e.exerciseId === 'diamond-pushup')).toHaveLength(1);
 
     // …and keeps progressing on that variation afterwards.
     const after = filled(history({ ...h, workouts: [...h.workouts, complete(next)] }), addDays(WEEK1, 15));
-    expect(planDay(bar, after, addDays(WEEK1, 15)).exercises[0]).toMatchObject({ exerciseId: 'diamond-pushup', target: 7 });
+    expect(planOn(bar, after, addDays(WEEK1, 15)).exercises[0]).toMatchObject({ exerciseId: 'diamond-pushup', target: 7 });
   });
 
   it('caps the target when no harder variation fits the level', () => {
     const push: Omit<PlannedExercise, 'slot'> = { exerciseId: 'pushup', sets: 3, target: 15, restSec: 90, role: 'main' };
     const l1 = filled(history({ maxEntries: [maxEntry(2)], workouts: [slotLog('push.main', push, [15, 15, 15])] }), addDays(WEEK1, 8));
     expect(targetRange(EXERCISES.pushup, 6)[1]).toBe(15);
-    expect(planDay(bar, l1, addDays(WEEK1, 8)).exercises[0]).toMatchObject({ exerciseId: 'pushup', target: 15 });
+    expect(planOn(bar, l1, addDays(WEEK1, 8)).exercises[0]).toMatchObject({ exerciseId: 'pushup', target: 15 });
   });
 
   it('moves to an easier variation at the bottom of the range', () => {
-    const profile = makeProfile({ equipment: ['bar', 'bands'] });
+    // With a box the L0 main is feet-assisted, so band pull-ups are the assist slot.
+    const profile = makeProfile({ equipment: ['bar', 'bands', 'box'] });
     const band: Omit<PlannedExercise, 'slot'> = { exerciseId: 'band-pullup', sets: 3, target: 2, restSec: 90, role: 'secondary' };
     const h = filled(history({ workouts: [slotLog('pullStrength.assist', band, [null, null, 1])] }), addDays(WEEK1, 7));
-    const next = planDay(profile, h, addDays(WEEK1, 7));
+    const next = planOn(profile, h, addDays(WEEK1, 7));
     expect(find(next, 'assist')).toMatchObject({ exerciseId: 'australian-row', target: EXERCISES['australian-row'].start });
     expect(next.exercises.filter((e) => e.exerciseId === 'australian-row')).toHaveLength(1);
   });
 
   it('raises max-based slots with the working max, never above max − 2', () => {
-    const w1 = planDay(bar, L2, WEEK1);
+    const w1 = planOn(bar, L2, WEEK1);
     expect(find(w1, 'main')).toMatchObject({ exerciseId: 'strict-pullup', target: 3 });
     const done = filled(history({ maxEntries: L2.maxEntries, workouts: [complete(w1)] }), addDays(WEEK1, 7));
-    expect(find(planDay(bar, done, addDays(WEEK1, 7)), 'main')!.target).toBe(3);
+    expect(find(planOn(bar, done, addDays(WEEK1, 7)), 'main')!.target).toBe(3);
 
     const raised = history({ ...done, maxEntries: [...done.maxEntries, maxEntry(9, addDays(WEEK1, 2), 'self')] });
-    expect(find(planDay(bar, raised, addDays(WEEK1, 7)), 'main')!.target).toBe(5);
+    expect(find(planOn(bar, raised, addDays(WEEK1, 7)), 'main')!.target).toBe(5);
   });
 
   it('holds progression the day after a tired / pain / ill recovery day, not after "busy"', () => {
-    const w1 = planDay(bar, L2, WEEK1);
+    const w1 = planOn(bar, L2, WEEK1);
     const next = addDays(WEEK1, 7);
     const base = filled(history({ maxEntries: L2.maxEntries, workouts: [complete(w1)] }), next);
     for (const reason of ['tired', 'pain', 'ill'] as const) {
       const h = history({ ...base, recoveryDays: [recoveryDay(addDays(next, -1), reason)] });
-      expect(find(planDay(bar, h, next), 'row')!.target, reason).toBe(find(w1, 'row')!.target);
+      expect(find(planOn(bar, h, next), 'row')!.target, reason).toBe(find(w1, 'row')!.target);
     }
     const busy = history({ ...base, recoveryDays: [recoveryDay(addDays(next, -1), 'busy')] });
-    expect(find(planDay(bar, busy, next), 'row')!.target).toBe(find(w1, 'row')!.target + 1);
+    expect(find(planOn(bar, busy, next), 'row')!.target).toBe(find(w1, 'row')!.target + 1);
   });
 
   it('ignores swapped exercises and deliberately reduced sessions', () => {
     const row: Omit<PlannedExercise, 'slot'> = { exerciseId: 'australian-row', sets: 3, target: 12, restSec: 75, role: 'accessory' };
     const swapped = filled(history({ maxEntries: L2.maxEntries, workouts: [slotLog('pullStrength.row', row, [12, 12, 12], WEEK1, {}, 'scapular-pull')] }), addDays(WEEK1, 7));
-    expect(find(planDay(bar, swapped, addDays(WEEK1, 7)), 'row')!.target).toBe(8);
+    expect(find(planOn(bar, swapped, addDays(WEEK1, 7)), 'row')!.target).toBe(8);
 
     const normal = slotLog('pullStrength.row', { ...row, target: 10 }, [10, 10, 10], WEEK1);
     const lighter = on(slotLog('pullStrength.row', row, [12, 12, 12], WEEK1, { lighterWeek: true }), addDays(WEEK1, 7));
     expect(lastSlotLog([normal, lighter], 'pullStrength.row')!.target).toBe(10);
     const h = filled(history({ maxEntries: L2.maxEntries, workouts: [normal, lighter] }), addDays(WEEK1, 14));
-    expect(find(planDay(bar, h, addDays(WEEK1, 14)), 'row')!.target).toBe(11);
+    expect(find(planOn(bar, h, addDays(WEEK1, 14)), 'row')!.target).toBe(11);
   });
 });
 
@@ -204,8 +231,8 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
 
   it('every 4th week keeps the exercises and targets with ~60 % of the sets', () => {
     for (let d = 0; d < 7; d++) {
-      const normal = planDay(bar, L2, addDays(WEEK1, d));
-      const lighter = planDay(bar, L2, addDays(WEEK3, d));
+      const normal = planOn(bar, L2, addDays(WEEK1, d));
+      const lighter = planOn(bar, L2, addDays(WEEK3, d));
       const training = normal.type !== 'light';
       expect(lighter.flags.lighterWeek).toBe(training);
       for (const r of ratio(lighter, normal)) {
@@ -219,16 +246,16 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
   it('does not shrink recovery days in a lighter week', () => {
     const seven = makeProfile({ daysPerWeek: 7 });
     const friday = 4;
-    expect(planDay(seven, L2, addDays(WEEK3, friday))).toEqual({ ...planDay(seven, L2, addDays(WEEK1, friday)), localDate: addDays(WEEK3, friday) });
+    expect(planOn(seven, L2, addDays(WEEK3, friday))).toEqual({ ...planOn(seven, L2, addDays(WEEK1, friday)), localDate: addDays(WEEK3, friday) });
   });
 
   it('comes back gradually after 7+ days off: 70 % → 85 % → 100 %, no guilt, no catch-up', () => {
-    const legs = complete(planDay(bar, L2, addDays(START, 4)));
+    const legs = complete(planOn(bar, L2, addDays(START, 4)));
     const h1 = history({ maxEntries: L2.maxEntries, workouts: [legs] });
     const thursday = addDays(WEEK1, 10);
     expect(returnFactor(h1, thursday)).toBe(FACTORS.returnFirst);
-    const back = planDay(bar, h1, thursday);
-    const fresh = planDay(bar, L2, thursday);
+    const back = planOn(bar, h1, thursday);
+    const fresh = planOn(bar, L2, thursday);
     expect(back.flags.returnAfterBreak).toBe(true);
     for (const r of ratio(back, fresh)) {
       expect(r.id).toBe(r.from.exerciseId);
@@ -239,16 +266,16 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
 
     const h2 = history({ ...h1, workouts: [legs, complete(back)] });
     expect(returnFactor(h2, addDays(thursday, 1))).toBe(FACTORS.returnSecond);
-    expect(planDay(bar, h2, addDays(thursday, 1)).flags.returnAfterBreak).toBe(true);
-    const h3 = history({ ...h2, workouts: [...h2.workouts, complete(planDay(bar, h2, addDays(thursday, 1)))] });
+    expect(planOn(bar, h2, addDays(thursday, 1)).flags.returnAfterBreak).toBe(true);
+    const h3 = history({ ...h2, workouts: [...h2.workouts, complete(planOn(bar, h2, addDays(thursday, 1)))] });
     expect(returnFactor(h3, addDays(thursday, 4))).toBe(1);
-    expect(planDay(bar, h3, addDays(thursday, 4)).flags.returnAfterBreak).toBe(false);
+    expect(planOn(bar, h3, addDays(thursday, 4)).flags.returnAfterBreak).toBe(false);
   });
 
   it('counts only real training for breaks (light/recovery extras do not reset the gap)', () => {
     expect(returnFactor(history(), WEEK1)).toBe(1);
-    const legs = complete(planDay(bar, L2, addDays(START, 4)));
-    const light = complete(planDay(bar, L2, addDays(WEEK1, 2)));
+    const legs = complete(planOn(bar, L2, addDays(START, 4)));
+    const light = complete(planOn(bar, L2, addDays(WEEK1, 2)));
     expect(light.type).toBe('light');
     expect(returnFactor(history({ workouts: [legs, light] }), addDays(WEEK1, 5))).toBe(FACTORS.returnFirst);
     expect(returnFactor(history({ workouts: [legs] }), addDays(START, 10))).toBe(1);
@@ -257,8 +284,8 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
   it('"Feeling off" takes ~30 % off the sets and 10 % off the targets', () => {
     for (let d = 0; d < 7; d++) {
       const date = addDays(WEEK1, d);
-      const normal = planDay(bar, L2, date);
-      const off = planDay(bar, L2, date, { feelingOff: true });
+      const normal = planOn(bar, L2, date);
+      const off = planOn(bar, L2, date, { feelingOff: true });
       expect(off.flags.feelingOff).toBe(true);
       for (const r of ratio(off, normal)) {
         expect(r.sets).toBe(Math.max(1, Math.round(r.from.sets * FACTORS.feelingOff)));
@@ -270,11 +297,11 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
   });
 
   it('never cuts below 40 % when reasons stack', () => {
-    const legs = complete(planDay(bar, L2, addDays(START, 4)));
+    const legs = complete(planOn(bar, L2, addDays(START, 4)));
     const h = history({ maxEntries: L2.maxEntries, workouts: [legs] });
     const date = WEEK3; // lighter week, 17 days after the last session
-    const stacked = planDay(bar, h, date, { feelingOff: true });
-    const normal = planDay(bar, L2, WEEK1);
+    const stacked = planOn(bar, h, date, { feelingOff: true });
+    const normal = planOn(bar, L2, WEEK1);
     expect(stacked.flags).toMatchObject({ lighterWeek: true, returnAfterBreak: true, feelingOff: true });
     stacked.exercises.forEach((e, i) => expect(e.sets).toBe(Math.max(1, Math.round(normal.exercises[i]!.sets * FACTORS.floor))));
   });
@@ -282,12 +309,12 @@ describe('planDay — lighter weeks, breaks and "feeling off"', () => {
 
 describe('planDay — max test (every 4 weeks, suggested, never forced)', () => {
   it('is suggested on the strength day of weeks 4, 8, 12…', () => {
-    expect(planDay(bar, L2, WEEK4).flags.maxTestSuggested).toBe(true);
-    expect(planDay(bar, L2, addDays(WEEK4, 28)).flags.maxTestSuggested).toBe(true);
-    expect(planDay(bar, L2, WEEK1).flags.maxTestSuggested).toBe(false);
-    expect(planDay(bar, L2, START).flags.maxTestSuggested).toBe(false);
-    expect(planDay(bar, L2, addDays(WEEK4, 3)).flags.maxTestSuggested).toBe(false);
-    expect(planDay(bar, L2, WEEK4, { variant: 'short' }).flags.maxTestSuggested).toBe(false);
+    expect(planOn(bar, L2, WEEK4).flags.maxTestSuggested).toBe(true);
+    expect(planOn(bar, L2, addDays(WEEK4, 28)).flags.maxTestSuggested).toBe(true);
+    expect(planOn(bar, L2, WEEK1).flags.maxTestSuggested).toBe(false);
+    expect(planOn(bar, L2, START).flags.maxTestSuggested).toBe(false);
+    expect(planOn(bar, L2, addDays(WEEK4, 3)).flags.maxTestSuggested).toBe(false);
+    expect(planOn(bar, L2, WEEK4, { variant: 'short' }).flags.maxTestSuggested).toBe(false);
   });
 
   it('is not suggested with recent pain/illness, tiredness, after a break or when feeling off', () => {
@@ -295,72 +322,72 @@ describe('planDay — max test (every 4 weeks, suggested, never forced)', () => 
       pain: history({ ...L2, recoveryDays: [recoveryDay(addDays(WEEK4, -6), 'pain')] }),
       ill: history({ ...L2, recoveryDays: [recoveryDay(addDays(WEEK4, -2), 'ill')] }),
       tired: history({ ...L2, recoveryDays: [recoveryDay(addDays(WEEK4, -2), 'tired')] }),
-      break: history({ ...L2, workouts: [complete(planDay(bar, L2, WEEK1))] }),
+      break: history({ ...L2, workouts: [complete(planOn(bar, L2, WEEK1))] }),
     };
-    for (const [name, h] of Object.entries(cases)) expect(planDay(bar, h, WEEK4).flags.maxTestSuggested, name).toBe(false);
-    expect(planDay(bar, L2, WEEK4, { feelingOff: true }).flags.maxTestSuggested).toBe(false);
+    for (const [name, h] of Object.entries(cases)) expect(planOn(bar, h, WEEK4).flags.maxTestSuggested, name).toBe(false);
+    expect(planOn(bar, L2, WEEK4, { feelingOff: true }).flags.maxTestSuggested).toBe(false);
     const oldPain = history({ ...L2, recoveryDays: [recoveryDay(addDays(WEEK4, -8), 'pain'), recoveryDay(addDays(WEEK4, -4), 'tired')] });
-    expect(planDay(bar, oldPain, WEEK4).flags).toMatchObject({ maxTestSuggested: true, painRecently: false });
+    expect(planOn(bar, oldPain, WEEK4).flags).toMatchObject({ maxTestSuggested: true, painRecently: false });
   });
 
   it('is not suggested again within 3 weeks of a test', () => {
-    const test = complete(planDay(bar, L2, addDays(WEEK4, -14), { variant: 'maxTest' }));
+    const test = complete(planOn(bar, L2, addDays(WEEK4, -14), { variant: 'maxTest' }));
     expect(test.type).toBe('maxTest');
-    expect(planDay(bar, history({ ...L2, workouts: [test] }), WEEK4).flags.maxTestSuggested).toBe(false);
+    expect(planOn(bar, history({ ...L2, workouts: [test] }), WEEK4).flags.maxTestSuggested).toBe(false);
   });
 
   it('builds a test session: warm-up, one test set at the current max, light accessories', () => {
-    const w = planDay(bar, L2, WEEK3, { variant: 'maxTest' });
+    const w = planOn(bar, L2, WEEK3, { variant: 'maxTest' });
     expect(w.type).toBe('maxTest');
     expect(w.exercises[0]).toMatchObject({ exerciseId: 'strict-pullup', role: 'warmup', target: 1 });
     expect(w.exercises[1]).toMatchObject({ exerciseId: 'strict-pullup', role: 'test', sets: 1, target: 5 });
     expect(w.exercises.slice(2).every((e) => e.role !== 'main')).toBe(true);
     expect(w.flags.lighterWeek).toBe(false);
-    const l0 = planDay(bar, history(), WEEK4, { variant: 'maxTest' });
+    const l0 = planOn(bar, history(), WEEK4, { variant: 'maxTest' });
     expect(l0.exercises[0]).toMatchObject({ exerciseId: 'scapular-pull', role: 'warmup' });
     expect(l0.exercises[1]).toMatchObject({ exerciseId: 'strict-pullup', role: 'test', target: 1 });
   });
 
   it('feeds the test result back into the working max and the level', () => {
-    const test = complete(planDay(bar, L2, WEEK4, { variant: 'maxTest' }), (ex) => (ex.role === 'test' ? 9 : ex.target));
+    const test = complete(planOn(bar, L2, WEEK4, { variant: 'maxTest' }), (ex) => (ex.role === 'test' ? 9 : ex.target));
     const h = history({ ...L2, workouts: [test] });
     expect(workingMax(h)?.value).toBe(9);
-    expect(planDay(bar, h, addDays(WEEK4, 3)).level).toBe(3);
+    expect(planOn(bar, h, addDays(WEEK4, 3)).level).toBe(3);
   });
 });
 
 describe('planDay — safety guards', () => {
   it('never puts heavy pulling within 48 h of a strength session or test', () => {
-    const strength = complete(planDay(bar, L2, WEEK1));
+    const strength = complete(planOn(bar, L2, WEEK1));
     const sunday = on(strength, addDays(WEEK1, 6));
     const monday = addDays(WEEK1, 7);
-    expect(planDay(bar, history({ ...L2, workouts: [sunday] }), monday).type).toBe('pullVolume');
-    expect(planDay(bar, history({ ...L2, workouts: [strength] }), addDays(WEEK1, 1), { variant: 'maxTest' }).type).toBe('pullVolume');
-    expect(planDay(bar, history({ ...L2, workouts: [strength] }), addDays(WEEK1, 2), { variant: 'maxTest' }).type).toBe('maxTest');
+    expect(planOn(bar, history({ ...L2, workouts: [sunday] }), monday).type).toBe('pullVolume');
+    expect(planOn(bar, history({ ...L2, workouts: [strength] }), addDays(WEEK1, 1), { variant: 'maxTest' }).type).toBe('pullVolume');
+    expect(planOn(bar, history({ ...L2, workouts: [strength] }), addDays(WEEK1, 2), { variant: 'maxTest' }).type).toBe('maxTest');
   });
 
   it('without a bar or rings: strength days become legs/core, volume days push, short stays short', () => {
     const none = makeProfile({ equipment: ['dipBars'] });
-    const monday = planDay(none, L2, WEEK1);
+    const monday = planOn(none, L2, WEEK1);
     expect(monday).toMatchObject({ type: 'legsCore', flags: { noPullEquipment: true } });
-    expect(planDay(none, L2, addDays(WEEK1, 3))).toMatchObject({ type: 'push', flags: { noPullEquipment: true } });
-    expect(planDay(none, L2, addDays(WEEK1, 1))).toMatchObject({ type: 'push', flags: { noPullEquipment: false } });
-    const short = planDay(none, L2, WEEK1, { variant: 'short' });
+    expect(planOn(none, L2, addDays(WEEK1, 3))).toMatchObject({ type: 'push', flags: { noPullEquipment: true } });
+    expect(planOn(none, L2, addDays(WEEK1, 1))).toMatchObject({ type: 'push', flags: { noPullEquipment: false } });
+    const short = planOn(none, L2, WEEK1, { variant: 'short' });
     expect(short).toMatchObject({ type: 'short', flags: { noPullEquipment: true } });
     expect(short.exercises[0]!.exerciseId).toBe('parallel-dips');
-    expect(planDay(none, L2, WEEK4).flags.maxTestSuggested).toBe(false);
+    expect(planOn(none, L2, WEEK4).flags.maxTestSuggested).toBe(false);
   });
 
   it('flags recent pain or illness (shown as a gentle note)', () => {
     const h = history({ ...L2, recoveryDays: [recoveryDay(addDays(WEEK1, -3), 'ill')] });
-    expect(planDay(bar, h, WEEK1).flags.painRecently).toBe(true);
-    expect(planDay(bar, h, addDays(WEEK1, 5)).flags.painRecently).toBe(false);
+    expect(planOn(bar, h, WEEK1).flags.painRecently).toBe(true);
+    expect(planOn(bar, h, addDays(WEEK1, 5)).flags.painRecently).toBe(false);
   });
 });
 
 describe('planDay — templates and skill work', () => {
   it('adds small push/legs/core accessories on 2–3 day weeks only', () => {
-    const slots = (days: number) => planDay(makeProfile({ daysPerWeek: days, sessionMinutes: 45 }), L2, WEEK1).exercises.map((e) => e.slot);
+    const slots = (days: number) => planOn(makeProfile({ daysPerWeek: days, sessionMinutes: 45 }), L2, WEEK1).exercises.map((e) => e.slot);
     expect(slots(3).some((s) => s.includes('.bal-'))).toBe(true);
     expect(slots(2).some((s) => s.includes('.bal-'))).toBe(true);
     expect(slots(4).some((s) => s.includes('.bal-'))).toBe(false);
@@ -369,7 +396,7 @@ describe('planDay — templates and skill work', () => {
   it('adds muscle-up skill work at level 4, or level 3 with the muscle-up goal', () => {
     const thursday = addDays(WEEK1, 3);
     const skill = (max: number, goals: Parameters<typeof makeProfile>[0] = {}) =>
-      find(planDay(makeProfile({ sessionMinutes: 45, ...goals }), history({ maxEntries: [maxEntry(max)] }), thursday), 'skill');
+      find(planOn(makeProfile({ sessionMinutes: 45, ...goals }), history({ maxEntries: [maxEntry(max)] }), thursday), 'skill');
     expect(skill(15)?.exerciseId).toBe('high-pullup');
     expect(skill(10, { goals: ['muscleUp'] })?.exerciseId).toBe('high-pullup');
     expect(skill(10)).toBeUndefined();
@@ -381,7 +408,7 @@ describe('planDay — templates and skill work', () => {
     const done = (id: PlannedExercise['exerciseId'], reps: number) =>
       slotLog(`pullVolume.x-${id}`, { exerciseId: id, sets: 1, target: reps, restSec: 60, role: 'accessory' }, [reps], START);
     const h = history({ maxEntries: [maxEntry(15)], workouts: [done('pushup', 15), done('high-pullup', 5)] });
-    expect(find(planDay(profile, h, thursday), 'skill')?.exerciseId).toBe('straight-bar-dip');
+    expect(find(planOn(profile, h, thursday), 'skill')?.exerciseId).toBe('straight-bar-dip');
   });
 
   it('simulated months keep every plan valid', () => {

@@ -12,6 +12,7 @@ import { withRhythm } from '../../domain/schedule';
 import { makeStamp } from '../../domain/time';
 import { DAYS_PER_WEEK, EQUIPMENT, GOALS, LANGS, SESSION_MINUTES, type Equipment, type Lang, type Profile } from '../../domain/types';
 import { Button, Chip, ChoiceGroup, Stepper, Switch } from '../../ui';
+import { RhythmSplit } from '../common/RhythmSplit';
 import { UpdateBanner } from '../common/UpdateBanner';
 import { openSavedThoughts } from '../thoughts/memory';
 import { DataSection } from './DataSection';
@@ -75,6 +76,7 @@ function You({ profile }: { profile: Profile }) {
             onChange={(n: number) => void actions.saveProfile(withRhythm(profile, n, todayLocal()))}
             options={DAYS_PER_WEEK.map((n) => ({ value: n, label: String(n) }))}
           />
+          <RhythmSplit days={profile.daysPerWeek} />
           <p className="t-caption muted">{t('you.rhythmHelp')}</p>
         </div>
         <div className="you__item">

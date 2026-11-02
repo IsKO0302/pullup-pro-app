@@ -6,7 +6,7 @@ import { useI18n } from '../../app/i18n';
 import { navigate } from '../../app/router';
 import { useStore } from '../../app/store';
 import { EXERCISE_TEXT } from '../../data/exercises';
-import { planDay } from '../../domain/plan';
+import { buildSession } from '../../domain/plan';
 import {
   adjustRest, completeSet, currentExercise, doneSetCount, endRest, finishSession, hasStarted, holdElapsedSec, isFinished,
   pause, progressOf, replacePlan, restLeftSec, resume, skipSet, startHold, stopHold, swapExercise, swapOptions, toggleWarmup,
@@ -137,7 +137,8 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
     }
   };
   const onFeelingOff = (on: boolean) => {
-    const plan = planDay(profile, history, session.localDate, { variant: session.variant, feelingOff: on });
+    // Same session type as started (the rotation already decided it), rebuilt lighter or back to normal.
+    const plan = buildSession(profile, history, session.localDate, session.plan.type, { variant: session.variant, feelingOff: on });
     update((s) => replacePlan(s, plan));
   };
 

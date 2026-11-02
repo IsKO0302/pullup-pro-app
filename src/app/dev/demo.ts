@@ -3,8 +3,8 @@
  * Never bundled into production (imported behind DEV / e2e-mode checks) and
  * only ever written to the e2e or dev database.
  */
-import { planDay } from '../../domain/plan';
-import { scheduledType } from '../../domain/schedule';
+import { buildSession } from '../../domain/plan';
+import { checkpointFor, close, dayOf, enter, initialRotation, type DayFacts } from '../../domain/rotation';
 import { addDays, weekStart, type LocalDate } from '../../domain/time';
 import {
   emptyAppData,
@@ -57,17 +57,28 @@ export function demoData(opts: Partial<DemoOptions> & { today: LocalDate }): App
   const recoveryDays: RecoveryDay[] = [];
   let noteIndex = 0;
 
+  // Walks the rotation day by day (the same transitions the app uses).
+  let rotation = initialRotation(profile);
   for (let date = startDate; date < o.today; date = addDays(date, 1)) {
-    if (!scheduledType(o.daysPerWeek, date)) continue;
-    const roll = rand();
-    if (roll < 0.06) {
+    rotation = enter(rotation, profile, date);
+    const day = dayOf(rotation, profile, date);
+    const facts: DayFacts = { trained: false, recovery: false, rest: false };
+    const roll = day.type ? rand() : 1;
+    if (day.type && roll < 0.06) {
       recoveryDays.push({ localDate: date, reason: rand() < 0.5 ? 'tired' : 'busy', atUtc: `${date}T07:00:00.000Z`, timeZone: 'UTC' });
+      facts.rest = true;
+    }
+    if (!day.type || roll < 0.1) {
+      // Rest, a chosen rest day, or a quiet gap: shown as "not trained", never as guilt.
+      rotation = close(rotation, day.slot, facts);
       continue;
     }
-    if (roll < 0.1) continue; // a quiet gap: shown as "not trained", never as guilt
     const history = { workouts, recoveryDays, maxEntries: data.maxEntries };
-    let plan = planDay(profile, history, date);
-    if (plan.flags.maxTestSuggested && rand() < 0.8) plan = planDay(profile, history, date, { variant: 'maxTest' });
+    let plan = buildSession(profile, history, date, day.type);
+    if (plan.flags.maxTestSuggested && rand() < 0.8) plan = buildSession(profile, history, date, 'maxTest', { variant: 'maxTest' });
+    if (plan.type === 'recovery') facts.recovery = true;
+    else facts.trained = true;
+    rotation = close(rotation, day.slot, facts);
     const current = Math.max(o.max, ...workouts.flatMap((w) => w.exercises.filter((e) => e.exerciseId === 'strict-pullup').flatMap((e) => e.sets.map((s) => s.actual))));
     const startedAtUtc = `${date}T17:${String(Math.floor(rand() * 50)).padStart(2, '0')}:00.000Z`;
     const durationSec = Math.round(plan.estimatedMinutes * 60 * (0.9 + rand() * 0.2));
@@ -111,6 +122,7 @@ export function demoData(opts: Partial<DemoOptions> & { today: LocalDate }): App
   }
   data.workouts = workouts;
   data.recoveryDays = recoveryDays;
+  data.rotation = checkpointFor(profile, data, o.today, null, null);
   data.meta = { ...data.meta, persist: 'granted', lastExportAtUtc: `${addDays(o.today, -3)}T09:00:00.000Z` };
   return data;
 }

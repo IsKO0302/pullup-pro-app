@@ -188,9 +188,18 @@ export function swapOptions(s: ActiveSession, owned: readonly Equipment[]): Exer
   if (!planned || !cur || cur.sets.length > 0) return [];
   const inSession = new Set(s.log.filter((_, i) => i !== s.exIndex).map((e) => e.exerciseId));
   const candidates = [planned.exerciseId, ...EXERCISES[planned.exerciseId].alternatives];
+  // Beginners are offered negatives only once their plan prescribes them (D61).
+  const negativesOk = s.plan.level > 0 || s.plan.exercises.some((e) => EXERCISES[e.exerciseId].family === 'negative');
   return [...new Set(candidates)]
     .filter((id) => id !== cur.exerciseId && !inSession.has(id) && hasEquipment(EXERCISES[id], owned))
+    .filter((id) => id === planned.exerciseId || EXERCISES[id].family !== 'negative' || negativesOk)
     .slice(0, 2);
+}
+
+/** Target of a swapped-in exercise: strict-family swaps keep the planned target (it keeps the reserve, D62). */
+function swapTarget(planned: PlannedExercise, id: ExerciseId): number {
+  const strict = (x: ExerciseId) => EXERCISES[x].family === 'pullup';
+  return strict(id) && strict(planned.exerciseId) ? Math.min(EXERCISES[id].start, planned.target) : EXERCISES[id].start;
 }
 
 export function swapExercise(s: ActiveSession, id: ExerciseId): ActiveSession {
@@ -199,7 +208,7 @@ export function swapExercise(s: ActiveSession, id: ExerciseId): ActiveSession {
   if (!planned || !cur || cur.sets.length > 0 || blocked(s)) return s;
   const entry: LoggedExercise = id === planned.exerciseId
     ? toLog(planned)
-    : { ...toLog(planned), exerciseId: id, unit: EXERCISES[id].unit, target: EXERCISES[id].start, swappedFrom: planned.exerciseId };
+    : { ...toLog(planned), exerciseId: id, unit: EXERCISES[id].unit, target: swapTarget(planned, id), swappedFrom: planned.exerciseId };
   return { ...s, holdStartedAtUtc: null, log: s.log.map((e, i) => (i === s.exIndex ? entry : e)) };
 }
 

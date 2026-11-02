@@ -70,7 +70,7 @@ test('months of history: the chart is keyboard-navigable and opens the workout; 
 
   // Weekly rhythm: 12 labelled weeks, the current one marked.
   await expect(page.locator('.rhythm__week')).toHaveCount(12);
-  await expect(page.locator('.rhythm__week.is-current')).toHaveAttribute('aria-label', /this week/);
+  await expect(page.locator('.rhythm__week.is-current')).toHaveAttribute('aria-label', /this week\): training \d+ of \d+/);
   await expect(page.getByText(/^Weeks on plan: \d+ of \d+$/)).toBeVisible();
 
   // Journal: 20 at a time.
