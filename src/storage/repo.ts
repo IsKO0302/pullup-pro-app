@@ -89,3 +89,30 @@ export function deleteRecoveryDay(db: IDBDatabase, localDate: string): Promise<v
 export function putThoughtDay(db: IDBDatabase, day: ThoughtDay): Promise<void> {
   return runTx(db, ['thoughtDays'], 'readwrite', (tx) => { tx.objectStore('thoughtDays').put(day); });
 }
+
+/**
+ * Replaces ALL user data in one transaction (import "replace", snapshot restore).
+ * Either everything is written or nothing changes. Snapshots are kept.
+ */
+export function replaceAll(db: IDBDatabase, data: AppData): Promise<void> {
+  const stores = existingStores(db, DATA_STORES);
+  return runTx(db, stores, 'readwrite', (tx) => {
+    for (const s of stores) tx.objectStore(s).clear();
+    const kv = tx.objectStore('kv');
+    if (data.profile) kv.put(data.profile, 'profile');
+    kv.put(data.settings, 'settings');
+    kv.put(data.meta, 'meta');
+    if (data.active) kv.put(data.active, 'active');
+    kv.put(data.favorites, 'favorites');
+    kv.put(data.recent, 'recent');
+    kv.put(data.maxEntries, 'maxEntries');
+    const workouts = tx.objectStore('workouts');
+    for (const w of data.workouts) workouts.put(w);
+    const recovery = tx.objectStore('recoveryDays');
+    for (const r of data.recoveryDays) recovery.put(r);
+    if (stores.includes('thoughtDays')) {
+      const thoughts = tx.objectStore('thoughtDays');
+      for (const t of data.thoughtDays) thoughts.put(t);
+    }
+  });
+}

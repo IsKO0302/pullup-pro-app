@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { START } from '../test/fixtures';
-import { WEEK_TEMPLATES, clampDays, isBalancedTemplate, isLighterWeek, isMaxTestWeek, nextScheduled, programWeek, scheduledType } from './schedule';
+import { WEEK_TEMPLATES, clampDays, daysPerWeekOn, isBalancedTemplate, isLighterWeek, isMaxTestWeek, nextScheduled, programWeek, scheduledOn, scheduledType, withRhythm } from './schedule';
 import { addDays } from './time';
-import { DAYS_PER_WEEK, type DayType } from './types';
+import { DAYS_PER_WEEK, type DayType, type Profile } from './types';
 
 const PULL: readonly (DayType | null)[] = ['pullStrength', 'pullVolume'];
 
@@ -60,5 +60,37 @@ describe('program weeks', () => {
     const weeks = Array.from({ length: 13 }, (_, w) => addDays(START, w * 7));
     expect(weeks.map((d) => isLighterWeek(START, d))).toEqual([false, false, false, true, false, false, false, true, false, false, false, true, false]);
     expect(weeks.map((d) => isMaxTestWeek(START, d))).toEqual([false, false, false, false, true, false, false, false, true, false, false, false, true]);
+  });
+});
+
+describe('rhythm changes', () => {
+  const base: Pick<Profile, 'daysPerWeek' | 'startDate' | 'rhythmChanges'> = { daysPerWeek: 4, startDate: '2026-01-05' };
+
+  it('without changes the current value applies everywhere', () => {
+    expect(daysPerWeekOn(base, '2025-01-01')).toBe(4);
+    expect(daysPerWeekOn(base, '2030-01-01')).toBe(4);
+  });
+
+  it('a change applies from that day on; earlier days keep the old value', () => {
+    const p = withRhythm(base, 6, '2026-02-02');
+    expect(p.daysPerWeek).toBe(6);
+    expect(daysPerWeekOn(p, '2026-02-01')).toBe(4);
+    expect(daysPerWeekOn(p, '2026-02-02')).toBe(6);
+    expect(daysPerWeekOn(p, '2025-12-01')).toBe(4);
+    const q = withRhythm(p, 3, '2026-03-02');
+    expect(q.rhythmChanges?.map((c) => [c.from, c.daysPerWeek])).toEqual([['2026-01-05', 4], ['2026-02-02', 6], ['2026-03-02', 3]]);
+    expect(daysPerWeekOn(q, '2026-02-20')).toBe(6);
+  });
+
+  it('several changes on one day keep only the last; same value is a no-op; values are clamped', () => {
+    const p = withRhythm(withRhythm(base, 6, '2026-02-02'), 5, '2026-02-02');
+    expect(p.rhythmChanges).toEqual([{ from: '2026-01-05', daysPerWeek: 4 }, { from: '2026-02-02', daysPerWeek: 5 }]);
+    expect(withRhythm(base, 4, '2026-02-02')).toBe(base);
+    expect(withRhythm(base, 12, '2026-02-02').daysPerWeek).toBe(7);
+  });
+
+  it('scheduledOn is null before the program starts', () => {
+    expect(scheduledOn(base, '2026-01-04')).toBeNull();
+    expect(scheduledOn(base, '2026-01-05')).toBe('pullStrength');
   });
 });

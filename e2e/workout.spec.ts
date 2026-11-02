@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { dict, onboard } from './helpers';
+import { dict, onboard, runToCompletion } from './helpers';
 
 const d = dict.en;
 // 4 days a week (default): Mon pull strength, Tue push, Wed rest, Thu pull volume, Fri legs + core.
@@ -7,29 +7,6 @@ const MONDAY = new Date('2026-01-12T10:00:00');
 const WEDNESDAY = new Date('2026-01-14T10:00:00');
 
 const today = (page: Page) => page.locator('.week__day.is-today');
-
-/** Logs every remaining set with its default target, skipping rest and timing holds briefly. */
-async function runToCompletion(page: Page) {
-  const title = page.getByRole('heading', { name: d['done.title'] });
-  for (let guard = 0; guard < 120; guard++) {
-    if (await title.isVisible()) return;
-    const skipRest = page.getByRole('button', { name: d['workout.restSkip'] });
-    if (await skipRest.isVisible()) {
-      await skipRest.click();
-      continue;
-    }
-    const startTimer = page.getByRole('button', { name: d['workout.timerStart'] });
-    if (await startTimer.isVisible()) {
-      await startTimer.click();
-      await page.clock.runFor(3000);
-      await page.getByRole('button', { name: d['workout.timerStop'] }).click();
-    }
-    const setDone = page.getByTestId('set-done');
-    if (await setDone.isVisible()) await setDone.click();
-    else await page.waitForTimeout(50);
-  }
-  await expect(title).toBeVisible();
-}
 
 test('START → sets → rest survives a reload → completion is saved → TODAY shows done', async ({ page }) => {
   await page.clock.install({ time: MONDAY });
@@ -105,7 +82,7 @@ test('leaving mid-workout keeps progress; Continue resumes; finishing early save
   await page.getByRole('button', { name: d['workout.finishConfirm'] }).click();
   await expect(page.getByRole('heading', { name: d['done.title'] })).toBeVisible();
   await expect(page.getByText(d['done.early'])).toBeVisible();
-  await expect(page.locator('.done__stat').filter({ hasText: d['done.sets'] })).toContainText(/1 \/ \d+/);
+  await expect(page.locator('.stat-grid__item').filter({ hasText: d['done.sets'] })).toContainText(/1 \/ \d+/);
 });
 
 test('discarding a session needs one confirmation and brings START back', async ({ page }) => {

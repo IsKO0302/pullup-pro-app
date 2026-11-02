@@ -28,7 +28,7 @@
 .week__dot--today { border: 2px solid var(--silver); box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--text-3); }
 .week__dot--rest { width: 5px; height: 5px; margin: 4.5px; background: var(--text-3); }
 .week__dot--recovery { border: 1.5px solid var(--text-2); background: radial-gradient(circle, var(--text-2) 0 2px, transparent 2.5px); }
-.week__dot--missed { border: 1.5px dashed var(--border); }
+.week__dot--missed { width: 10px; height: 2px; margin: 6px 2px; border-radius: 1px; background: var(--text-3); }
 .week__day.is-today .week__dot--done { box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--text-3); }
 
 .rest-sheet__reasons { border: 0; margin: var(--space-4) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }

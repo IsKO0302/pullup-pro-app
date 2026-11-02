@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, type ActiveSession, type CompletedWorkout, type Profile } from '../domain/types';
+import { DEFAULT_SETTINGS, emptyAppData, type ActiveSession, type CompletedWorkout, type Profile } from '../domain/types';
 import { deleteDb, MIGRATIONS, openDb, SCHEMA_VERSION, StorageError } from './db';
-import { commitWorkout, deleteKv, loadAll, putKv, putRecoveryDay, putThoughtDay, putWorkout } from './repo';
+import { commitWorkout, deleteKv, loadAll, putKv, putRecoveryDay, putThoughtDay, putWorkout, replaceAll } from './repo';
 
 // Every test uses its own throw-away database name; the real "pullup-pro"
 // database is never opened by tests (guardrail: tests never touch real data).
@@ -92,6 +92,47 @@ describe('storage', () => {
     const data = await loadAll(db);
     expect(data.active).toEqual({ id: 'w1' });
     expect(data.workouts).toEqual([]);
+  });
+
+  it('replaceAll swaps every data store in one go and keeps snapshots', async () => {
+    const { db } = await freshDb();
+    await putKv(db, 'profile', profile);
+    await putWorkout(db, workout('old'));
+    await putRecoveryDay(db, { localDate: '2025-03-05', reason: null, atUtc: '2025-03-05T08:00:00.000Z', timeZone: null });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('snapshots', 'readwrite');
+      tx.objectStore('snapshots').put({ id: 'snap-1' });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    const next = emptyAppData();
+    next.profile = { ...profile, name: 'New' };
+    next.workouts = [workout('a', '2025-03-10'), workout('b', '2025-03-11')];
+    next.favorites = ['t-1'];
+    await replaceAll(db, next);
+    const data = await loadAll(db);
+    expect(data.profile?.name).toBe('New');
+    expect(data.workouts.map((w) => w.id)).toEqual(['a', 'b']);
+    expect(data.recoveryDays).toEqual([]);
+    expect(data.favorites).toEqual(['t-1']);
+    const snaps = await new Promise<unknown[]>((resolve) => {
+      const req = db.transaction('snapshots').objectStore('snapshots').getAll();
+      req.onsuccess = () => resolve(req.result as unknown[]);
+    });
+    expect(snaps).toHaveLength(1);
+  });
+
+  it('replaceAll changes nothing when any record is invalid (atomic)', async () => {
+    const { db } = await freshDb();
+    await putKv(db, 'profile', profile);
+    await putWorkout(db, workout('keep'));
+    const next = emptyAppData();
+    next.profile = { ...profile, name: 'Broken' };
+    next.workouts = [workout('a'), { ...workout('b'), id: undefined } as unknown as CompletedWorkout];
+    await expect(replaceAll(db, next)).rejects.toBeInstanceOf(StorageError);
+    const data = await loadAll(db);
+    expect(data.profile?.name).toBe('Isa');
+    expect(data.workouts.map((w) => w.id)).toEqual(['keep']);
   });
 
   it('migrates v1 → v2 and preserves every existing record', async () => {

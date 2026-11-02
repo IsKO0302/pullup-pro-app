@@ -169,3 +169,4 @@
 .list__row:last-child { border-bottom: 0; }
 .list__main { flex: 1; min-width: 0; }
 .list__sub { color: var(--text-2); font-size: 0.875rem; line-height: 1.25rem; }
+.sheet__actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }

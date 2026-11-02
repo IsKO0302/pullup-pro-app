@@ -88,3 +88,18 @@ Changing the exercise mid-way would mix two exercises in one log entry and corru
 
 ### D26 · The session is persisted after every change (set, rest, pause, timer)
 Rest and hold timers are stored as UTC timestamps, so a reload, a killed tab or a locked phone resumes at the correct second. Pausing shifts both. The screen wake lock is requested while the workout screen is open (where supported).
+
+### D27 · Pull-up max chart = best strict set per week, on a true time axis
+Section 9 defines the max as the best strict single set in the period; a week is the period. Points come only from workouts (strict-pullup sets and max tests), so tapping a point can open the workout; self-reports are not drawn. Gaps between weeks stay visible (x is time, not index). Fewer than two points → a written empty state. Interaction is one slider-like control (tap/drag to the nearest week, arrow keys, Home/End) instead of dozens of tiny targets.
+
+### D28 · Weekly rhythm counts sessions, not weekdays
+Planned = scheduled training days of that week (optional recovery-mobility days and planned rest excluded). Done = days with a real training session — a session brought forward to a rest day counts. A planned day the user marked "rest today" counts toward the plan ("on plan" = done + recovery ≥ planned). Light extras never count. The current week is shown but not judged.
+
+### D29 · Past weeks keep the rhythm that applied then (`profile.rhythmChanges`)
+Changing days per week records `{ from, daysPerWeek }`; the week strip, the rhythm grid and the "4 weeks of rhythm" milestone read the value that applied on each date, so raising the rhythm never turns old weeks into "missed". Optional field → no schema migration needed; absent = the current value everywhere.
+
+### D30 · Milestones are recomputed from data, never stored
+12 fixed milestones in a fixed order, each with the local date it was first reached or its plain criterion. Recomputing from history means deleting or importing workouts can never leave a stale badge. "New personal record" uses the same rule as the completion screen (tested against it over a simulated half year).
+
+### D31 · Demo data only through a guarded dev/e2e hook
+`window.__pullupTest.seedDemo()` exists only in dev/e2e builds on a non-default database, refuses `pullup-pro` itself (unit-tested), and writes through the same atomic `replaceAll` that import will use.

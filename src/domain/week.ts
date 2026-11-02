@@ -1,5 +1,5 @@
 import { isTraining, type History } from './history';
-import { scheduledType } from './schedule';
+import { scheduledOn } from './schedule';
 import { weekDates, type LocalDate } from './time';
 import type { DayType, Profile } from './types';
 
@@ -22,17 +22,44 @@ export function trainedOn(history: Pick<History, 'workouts'>, date: LocalDate): 
   return history.workouts.some((w) => w.localDate === date && (isTraining(w) || w.type === 'recovery'));
 }
 
-export function dayState(profile: Profile, history: History, date: LocalDate, today: LocalDate): DayCell {
-  const scheduled = date < profile.startDate ? null : scheduledType(profile.daysPerWeek, date);
+/** Day lookups built once per render (cheap even for years of history). */
+export interface DayIndex {
+  /** Days with a training or recovery-mobility session. */
+  done: ReadonlySet<LocalDate>;
+  /** Days with a real training session (counts toward the rhythm). */
+  trained: ReadonlySet<LocalDate>;
+  /** Days the user chose to rest. */
+  recovery: ReadonlySet<LocalDate>;
+}
+
+export function indexDays(history: Pick<History, 'workouts' | 'recoveryDays'>): DayIndex {
+  const done = new Set<LocalDate>();
+  const trained = new Set<LocalDate>();
+  for (const w of history.workouts) {
+    if (isTraining(w)) trained.add(w.localDate);
+    if (isTraining(w) || w.type === 'recovery') done.add(w.localDate);
+  }
+  return { done, trained, recovery: new Set(history.recoveryDays.map((r) => r.localDate)) };
+}
+
+type ScheduleProfile = Pick<Profile, 'daysPerWeek' | 'rhythmChanges' | 'startDate'>;
+
+export function dayStateIn(index: DayIndex, profile: ScheduleProfile, date: LocalDate, today: LocalDate): DayCell {
+  const scheduled = scheduledOn(profile, date);
   const cell = (state: DayState): DayCell => ({ date, state, scheduled, isToday: date === today });
-  if (trainedOn(history, date)) return cell('done');
-  if (history.recoveryDays.some((r) => r.localDate === date)) return cell('recovery');
+  if (index.done.has(date)) return cell('done');
+  if (index.recovery.has(date)) return cell('recovery');
   if (date === today) return cell(scheduled === null ? 'rest' : 'today');
   if (date > today) return cell(scheduled === null ? 'rest' : 'planned');
   return cell(scheduled === null || scheduled === 'recovery' ? 'rest' : 'missed');
 }
 
+export function dayState(profile: ScheduleProfile, history: History, date: LocalDate, today: LocalDate): DayCell {
+  return dayStateIn(indexDays(history), profile, date, today);
+}
+
 /** Monday–Sunday of the week containing `today`. */
-export function weekStrip(profile: Profile, history: History, today: LocalDate): DayCell[] {
-  return weekDates(today).map((d) => dayState(profile, history, d, today));
+export function weekStrip(profile: ScheduleProfile, history: History, today: LocalDate): DayCell[] {
+  const index = indexDays(history);
+  return weekDates(today).map((d) => dayStateIn(index, profile, d, today));
 }

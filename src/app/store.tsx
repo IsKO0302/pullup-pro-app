@@ -4,7 +4,7 @@ import {
   type ActiveSession, type AppData, type CompletedWorkout, type MaxEntry, type Meta, type Profile,
   type RecentThought, type RecoveryDay, type Settings, type ThoughtDay,
 } from '../domain/types';
-import { openDb, StorageError } from '../storage/db';
+import { DEFAULT_DB_NAME, openDb, StorageError } from '../storage/db';
 import * as repo from '../storage/repo';
 
 export type StoreStatus = { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; detail: string };
@@ -148,6 +148,12 @@ export function StoreProvider({ dbName, children }: { dbName: string; children: 
       setData(loaded);
     },
   }), [run]);
+
+  // Only dev/e2e builds running on a SEPARATE database get the demo-data hook; production never does.
+  useEffect(() => {
+    if (!(import.meta.env.DEV || import.meta.env.MODE === 'e2e') || dbName === DEFAULT_DB_NAME || status.kind !== 'ready') return;
+    void import('./dev/hooks').then((m) => m.installTestHooks(() => dbRef.current, actions.reload));
+  }, [status.kind, actions, dbName]);
 
   const value = useMemo<StoreValue>(() => ({
     status,

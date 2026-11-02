@@ -1,5 +1,5 @@
 import { addDays, daysBetween, weekdayIndex, weekStart, type LocalDate } from './time';
-import type { DayType } from './types';
+import type { DayType, Profile } from './types';
 
 const P: DayType = 'pullStrength';
 const V: DayType = 'pullVolume';
@@ -58,4 +58,28 @@ export function nextScheduled(daysPerWeek: number, date: LocalDate): { date: Loc
     if (type) return { date: d, type };
   }
   return null;
+}
+
+/** The days-per-week setting that applied on `date` (past weeks keep their own rhythm). */
+export function daysPerWeekOn(profile: Pick<Profile, 'daysPerWeek' | 'rhythmChanges'>, date: LocalDate): number {
+  const log = profile.rhythmChanges ?? [];
+  if (log.length === 0) return profile.daysPerWeek;
+  let days = log[0]!.daysPerWeek;
+  for (const c of log) if (c.from <= date) days = c.daysPerWeek;
+  return days;
+}
+
+/** Changing the rhythm applies from `today` on; earlier days keep the old value. */
+export function withRhythm<P extends Pick<Profile, 'daysPerWeek' | 'rhythmChanges' | 'startDate'>>(profile: P, daysPerWeek: number, today: LocalDate): P {
+  const days = clampDays(daysPerWeek);
+  if (days === profile.daysPerWeek) return profile;
+  const log = profile.rhythmChanges?.length ? profile.rhythmChanges : [{ from: profile.startDate, daysPerWeek: profile.daysPerWeek }];
+  const kept = log.filter((c) => c.from < today);
+  return { ...profile, daysPerWeek: days, rhythmChanges: [...kept, { from: today, daysPerWeek: days }] };
+}
+
+/** Planned type on `date` using the rhythm that applied that day; null before the program started. */
+export function scheduledOn(profile: Pick<Profile, 'daysPerWeek' | 'rhythmChanges' | 'startDate'>, date: LocalDate): DayType | null {
+  if (date < profile.startDate) return null;
+  return scheduledType(daysPerWeekOn(profile, date), date);
 }

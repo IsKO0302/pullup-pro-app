@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../../app/i18n';
 import { navigate } from '../../app/router';
 import { useStore } from '../../app/store';
-import { recordsOf, totalsOf } from '../../domain/stats';
+import { recordsOf } from '../../domain/stats';
 import type { CompletedWorkout, Mood } from '../../domain/types';
 import { Button, Chip } from '../../ui';
-import { durationText, typeLabel, useExerciseText } from '../common/labels';
+import { typeLabel, useExerciseText } from '../common/labels';
+import { WorkoutStats } from '../common/WorkoutStats';
 import './completion.css';
 
 const MOODS: readonly Mood[] = [1, 2, 3, 4, 5];
@@ -26,7 +27,6 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
   const { data, actions } = useStore();
   const text = useExerciseText();
   const [note, setNote] = useState(w.note);
-  const totals = useMemo(() => totalsOf(w), [w]);
   const records = useMemo(() => recordsOf(w, data.workouts, data.maxEntries), [w, data.workouts, data.maxEntries]);
 
   const saveNote = async () => {
@@ -39,18 +39,6 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
     navigate('today', { replace: true });
   };
 
-  const stats: { label: string; value: string; sub?: string }[] = [
-    { label: t('done.duration'), value: durationText(t, w.durationSec) },
-    { label: t('done.sets'), value: totals.setsDone === totals.setsPlanned ? num(totals.setsDone) : t('common.fraction', { a: totals.setsDone, b: totals.setsPlanned }) },
-    { label: t('done.reps'), value: totals.reps > 0 ? num(totals.reps) : t('done.none') },
-    {
-      label: t('done.pullups'),
-      value: totals.pullups > 0 ? num(totals.pullups) : t('done.none'),
-      sub: totals.bestStrictSet > 0 ? t('done.pullupsBest', { n: totals.bestStrictSet }) : undefined,
-    },
-  ];
-  if (totals.seconds > 0) stats.push({ label: t('done.secondsTotal'), value: t('common.sec', { n: totals.seconds }) });
-
   return (
     <div className="screen-pad done">
       <header className="done__head">
@@ -59,14 +47,7 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
         {w.finishedEarly && <p className="muted">{t('done.early')}</p>}
       </header>
 
-      <dl className="done__stats">
-        {stats.map((s) => (
-          <div key={s.label} className="done__stat">
-            <dt className="t-caption muted">{s.label}</dt>
-            <dd className="num">{s.value}{s.sub && <span className="t-caption muted done__sub">{s.sub}</span>}</dd>
-          </div>
-        ))}
-      </dl>
+      <WorkoutStats workout={w} />
 
       {records.length > 0 && (
         <section className="done__records" aria-labelledby="records-title">

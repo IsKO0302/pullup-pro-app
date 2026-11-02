@@ -8,7 +8,7 @@ import { planDay, type PlanOptions } from '../domain/plan';
 import { scheduledType } from '../domain/schedule';
 import { addDays, type LocalDate } from '../domain/time';
 import type {
-  CompletedWorkout, LoggedExercise, MaxEntry, PlannedExercise, Profile, RecoveryDay, RecoveryReason, Workout,
+  CompletedWorkout, ExerciseId, ExerciseRole, LoggedExercise, MaxEntry, PlannedExercise, Profile, RecoveryDay, RecoveryReason, Workout,
 } from '../domain/types';
 
 /** A Monday: program week 0 starts here. */
@@ -114,4 +114,43 @@ export function totalSets(w: Workout): number {
 
 export function find(w: Workout, slotKey: string): PlannedExercise | undefined {
   return w.exercises.find((e) => e.slot === `${w.type}.${slotKey}`);
+}
+
+/** A hand-made completed workout: `[exercise, sets (null = skipped), role?]`. */
+export function workoutOf(
+  localDate: LocalDate,
+  type: CompletedWorkout['type'],
+  items: readonly (readonly [ExerciseId, readonly (number | null)[], ExerciseRole?])[],
+  hour = 18,
+): CompletedWorkout {
+  const hh = String(hour).padStart(2, '0');
+  const startedAtUtc = `${localDate}T${hh}:00:00.000Z`;
+  const completedAtUtc = `${localDate}T${hh}:30:00.000Z`;
+  return {
+    id: `h-${localDate}-${type}-${hh}`,
+    type,
+    level: 2,
+    startedAtUtc,
+    completedAtUtc,
+    localDate,
+    timeZone: 'UTC',
+    durationSec: 1800,
+    exercises: items.map(([exerciseId, sets, role = 'main']) => ({
+      exerciseId,
+      slot: `${type}.${role}`,
+      unit: EXERCISES[exerciseId].unit,
+      role,
+      target: 5,
+      plannedSets: sets.length,
+      restSec: 90,
+      sets: sets.map((v) => (v === null
+        ? { target: 5, actual: 0, status: 'skipped' as const, atUtc: completedAtUtc }
+        : { target: 5, actual: v, status: 'done' as const, atUtc: completedAtUtc })),
+      swappedFrom: null,
+    })),
+    flags: { lighterWeek: false, returnAfterBreak: false, feelingOff: false, maxTestSuggested: false, noPullEquipment: false, painRecently: false },
+    mood: null,
+    note: '',
+    finishedEarly: false,
+  };
 }

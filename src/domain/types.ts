@@ -58,6 +58,17 @@ export interface Profile {
   startDate: LocalDate;
   createdAtUtc: string;
   onboarding: OnboardingStep;
+  /**
+   * Days-per-week history, oldest first (absent until the rhythm is first changed).
+   * Past weeks are judged against the rhythm that applied then — never re-judged.
+   */
+  rhythmChanges?: RhythmChange[];
+}
+
+export interface RhythmChange {
+  /** First local day the value applies to. */
+  from: LocalDate;
+  daysPerWeek: number;
 }
 
 export interface Settings {

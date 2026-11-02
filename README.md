@@ -37,6 +37,23 @@ On Windows PowerShell with a custom browser: `$env:CHROMIUM_PATH="C:\path\to\chr
 - Back up regularly: YOU → Data → Export everything. Import always takes an internal
   snapshot first.
 
+### Demo data (development only)
+
+To look at PROGRESS with months of history, run the dev server on a **separate**
+database and seed it from the browser console:
+
+```bash
+VITE_DB_NAME=pullup-pro-dev npm run dev
+```
+
+```js
+await window.__pullupTest.seedDemo({ today: '2026-03-18', lang: 'en', weeks: 10 })
+```
+
+The hook exists only in dev/e2e builds running on a database other than `pullup-pro`,
+and it refuses the real database name even if called directly. Production builds do
+not contain it.
+
 ## Project files
 
 - `PROJECT.md` — status, what is verified and what is not.

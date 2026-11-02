@@ -1,5 +1,5 @@
 import { Activity, Quote, Sun, User } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { CompletionScreen } from '../features/completion/CompletionScreen';
 import { Onboarding } from '../features/onboarding/Onboarding';
 import { LanguageScreen } from '../features/onboarding/LanguageScreen';
@@ -7,10 +7,13 @@ import { WelcomeScreen } from '../features/onboarding/WelcomeScreen';
 import { TodayScreen } from '../features/today/TodayScreen';
 import { WorkoutScreen } from '../features/workout/WorkoutScreen';
 import { YouScreen } from '../features/you/YouScreen';
-import { BottomNav, type NavItem } from '../ui';
+import { BottomNav, Skeleton, type NavItem } from '../ui';
 import { useI18n } from './i18n';
 import { navigate } from './router';
 import { useStore } from './store';
+
+// Charts and history are code-split: TODAY and the workout stay in the first bundle.
+const ProgressPage = lazy(() => import('../features/progress/ProgressPage'));
 
 const TABS = ['today', 'progress', 'thoughts', 'you'] as const;
 type Tab = (typeof TABS)[number];
@@ -48,6 +51,12 @@ export function Shell({ route }: { route: string[] }) {
       screen = <YouScreen />;
       break;
     case 'progress':
+      screen = (
+        <Suspense fallback={<div className="screen-pad"><Skeleton height={32} width="50%" /></div>}>
+          <ProgressPage id={route[1]} />
+        </Suspense>
+      );
+      break;
     case 'thoughts':
       screen = <div className="screen-pad"><h1 className="t-h1">{t(`nav.${tab}`)}</h1></div>;
       break;
