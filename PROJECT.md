@@ -26,3 +26,8 @@ See README.md.
 - DONE: Vite + React 19 + TypeScript 6 (strict) project, ESLint with layer boundaries, Vitest, Playwright config, PWA plugin, icons, README/PROJECT/DECISIONS/IDEAS, git.
 - VERIFIED: `npm run typecheck`, `npm run lint`, `npm test` (5 tests), `npm run build` pass; dev server served the themed shell (headless Chromium screenshot).
 - NOT VERIFIED: nothing user-facing yet.
+
+### Phase 1 — Design system + shell
+- DONE: tokens (colors, type scale, spacing, motion), self-hosted fonts, Button/IconButton, Chip/ChoiceGroup, Stepper, BottomNav, Sheet (native dialog), Ring timer, ProgressBar, Skeleton, Switch, EmptyState, Banner, reduced-motion handling, hash router, dev-only `#/styleguide` (EN/RU/TR strings) and `#/glyphs`.
+- VERIFIED: contrast test (22 pairs ≥ 4.5:1) passes; typecheck + lint clean; styleguide and glyph pages rendered in headless Chromium at 390 px (Cyrillic ё/Ё and Turkish ı İ ş ğ ç ö ü in both fonts; `toLocaleUpperCase('tr')` → İSTANBUL).
+- NOT VERIFIED: real-device rendering (iOS/Android fonts), screen readers.

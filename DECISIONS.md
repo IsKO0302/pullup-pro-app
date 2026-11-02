@@ -29,3 +29,17 @@ Rejected: completion date (a session from 23:50 to 00:20 would jump to the next 
 
 ### D7 · App icons are generated once from `public/favicon.svg` with ImageMagick and committed
 No icon-generation dependency at build time.
+
+### D8 · Plain global CSS with BEM-style class names (no CSS modules)
+Small app, one design system; tokens are CSS custom properties, components have prefixed classes (`btn`, `chip`, `nav__item`).
+Rejected: CSS modules / vanilla-extract — more tooling for no visible gain at this size.
+
+### D9 · `--text-3` lightened to `#858C96`
+The spec value `#707781` measures 3.57–4.41:1 on the four surfaces (below AA for small text); `#858C96` is ≥ 4.76:1 on all of them. Enforced by `src/ui/contrast.test.ts`.
+Rejected: `#7B828C` (spec suggestion) — 4.16:1 on `--surface-3`.
+
+### D10 · `--danger-text: #D27C7C` for red text; `--danger` stays for borders/solid buttons
+`#C46B6B` text on `--surface-3` is 4.35:1. Solid danger buttons use dark text on `--danger` (5.37:1).
+
+### D11 · Fonts: Inter Tight Variable (UI) + Cormorant Garamond 500/600 (quotes), self-hosted via @fontsource
+Only Latin, Latin-Extended (Turkish ı İ ş ğ) and Cyrillic (ё Ё) subsets are imported for Cormorant; Inter Tight's variable CSS covers all subsets with unicode-range. Glyph coverage was checked on the dev page `#/glyphs` (screenshot). Cormorant digits are old-style, so all numbers use Inter Tight with tabular figures.
