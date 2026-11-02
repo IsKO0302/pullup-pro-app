@@ -22,10 +22,10 @@
 .hold .is-reached { color: var(--silver); }
 
 .warmup { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-2) var(--space-4); background: var(--surface-1); }
-.warmup summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); list-style: none; }
+.warmup summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); list-style: none; }
 .warmup summary::-webkit-details-marker { display: none; }
 .warmup ul { list-style: none; padding: 0; margin: var(--space-2) 0 var(--space-2); display: flex; flex-direction: column; }
-.warmup label { display: flex; gap: var(--space-3); align-items: center; min-height: 44px; cursor: pointer; }
+.warmup label { display: flex; gap: var(--space-3); align-items: center; min-height: var(--tap); cursor: pointer; }
 .warmup input { width: 22px; height: 22px; accent-color: var(--silver); flex: none; }
 
 .rest { align-items: center; text-align: center; }

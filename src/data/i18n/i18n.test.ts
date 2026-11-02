@@ -36,6 +36,27 @@ describe('dictionaries', () => {
       }
     }
   });
+
+  // Copy pass (phase 9): the same typography everywhere, so it can never drift.
+  it.each(LANGS)('%s uses clean typography (… ’ « » —, no stray spaces)', (lang) => {
+    const problems: string[] = [];
+    for (const [k, v] of Object.entries(DICTIONARIES[lang])) {
+      if (v.includes('...')) problems.push(`${k}: "..." instead of "…"`);
+      if (/['"]/.test(v)) problems.push(`${k}: straight quote (use ’ “ ” or « »)`);
+      if (/ {2}/.test(v) || v !== v.trim()) problems.push(`${k}: stray spaces`);
+      if (/\s-\s/.test(v)) problems.push(`${k}: hyphen used as a dash`);
+      if (/ [,.!?:;]/.test(v)) problems.push(`${k}: space before punctuation`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('Russian UI text has no Latin words except the brand lines', () => {
+    const allowed = /PULLUP PRO( ORIGINALS)?|YOU VS\. YOU\.|JSON|PNG/g;
+    const latin = Object.entries(DICTIONARIES.ru)
+      .filter(([, v]) => /[A-Za-z]{2,}/.test(v.replace(/\{[^}]*\}/g, '').replace(allowed, '')))
+      .map(([k]) => k);
+    expect(latin).toEqual([]);
+  });
 });
 
 describe('createI18n', () => {

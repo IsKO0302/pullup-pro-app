@@ -142,7 +142,7 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
   };
 
   return (
-    <div className="workout">
+    <main className="workout">
       <p className="visually-hidden" aria-live="polite">{announce}</p>
       <header className="workout__top">
         <IconButton label={t('workout.exit')} onClick={() => setSheet('exit')}><X size={22} strokeWidth={1.5} aria-hidden /></IconButton>
@@ -152,21 +152,22 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
       <ProgressBar value={progressOf(session)} label={t('workout.progress')} />
 
       {resting ? (
-        <main className="workout__body rest">
-          <p className="t-eyebrow">{t('workout.rest')}</p>
+        <div className="workout__body rest">
+          <h1 className="t-eyebrow">{t('workout.rest')}</h1>
           <Ring progress={session.restTotalSec > 0 ? left / session.restTotalSec : 0} label={t('workout.restLeft', { n: left })}>
             <span className="t-numeral num" aria-hidden>{clock(left)}</span>
           </Ring>
           <div className="rest__controls">
-            <Button aria-label={t('workout.restMinusLabel')} onClick={() => update((s) => adjustRest(s, -15, new Date()))}>{t('workout.restMinus')}</Button>
-            <Button aria-label={t('workout.restPlusLabel')} onClick={() => update((s) => adjustRest(s, 15, new Date()))}>{t('workout.restPlus')}</Button>
+            {/* The accessible name starts with the visible text (WCAG 2.5.3), then says what it does. */}
+            <Button aria-label={`${t('workout.restMinus')} (${t('workout.restMinusLabel')})`} onClick={() => update((s) => adjustRest(s, -15, new Date()))}>{t('workout.restMinus')}</Button>
+            <Button aria-label={`${t('workout.restPlus')} (${t('workout.restPlusLabel')})`} onClick={() => update((s) => adjustRest(s, 15, new Date()))}>{t('workout.restPlus')}</Button>
             <Button variant="ghost" className="rest__skip" onClick={() => update(endRest)}>{t('workout.restSkip')}</Button>
           </div>
           <p className="rest__next">{t('workout.next', { name, i: session.setIndex + 1, n: ex.plannedSets })}</p>
           {restThought && <p className="rest__thought" data-thought-id={restThought.id}>{restThought.text[lang]}</p>}
-        </main>
+        </div>
       ) : (
-        <main className="workout__body">
+        <div className="workout__body">
           {preStart && training && (
             <div className="workout__prestart">
               <details className="warmup">
@@ -245,7 +246,7 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
             </div>
             {seconds && !holdRunning && <p className="t-caption muted workout__hint">{t('workout.timerHint')}</p>}
           </div>
-        </main>
+        </div>
       )}
 
       {paused && (
@@ -304,6 +305,6 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
           <Button block onClick={() => setSheet(null)}>{t('common.cancel')}</Button>
         </div>
       </Sheet>
-    </div>
+    </main>
   );
 }

@@ -104,6 +104,8 @@
 }
 .setup__hint { text-align: center; color: var(--text-3); margin: 0; }
 .setup__days .chips--grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+/* Six 48 px targets in one row on 360 px screens. */
+@media (max-width: 374px) { .setup__days .chips--grid { gap: var(--space-1); } }
 .setup__minutes .chips--grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .setup__days .chip, .setup__minutes .chip { padding-left: 0; padding-right: 0; justify-content: center; }
 .lang__restore { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }

@@ -174,7 +174,7 @@ function Today({ profile }: { profile: Profile }) {
 }
 
 function WorkoutCard({ plan: w, names }: { plan: Workout; names: string[] }) {
-  const { t, upper, lang } = useI18n();
+  const { t, upper } = useI18n();
   const shown = names.slice(0, names.length > 5 ? 4 : 5);
   return (
     <section className="card today__card" aria-labelledby="today-title">
@@ -186,7 +186,7 @@ function WorkoutCard({ plan: w, names }: { plan: Workout; names: string[] }) {
         {names.length > shown.length && <li className="muted">{t('today.more', { n: names.length - shown.length })}</li>}
       </ul>
       <p className="today__meta num">
-        {t('common.approxMin', { n: w.estimatedMinutes })} · {t('today.focus', { muscles: muscleList(t, w.muscles, lang) })}
+        {t('common.approxMin', { n: w.estimatedMinutes })} · {t('today.focus', { muscles: muscleList(t, w.muscles) })}
       </p>
       {(w.flags.lighterWeek || w.flags.returnAfterBreak || w.flags.painRecently || w.flags.noPullEquipment) && (
         <div className="today__notes">

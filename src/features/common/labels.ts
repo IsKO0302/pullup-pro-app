@@ -20,13 +20,12 @@ export function typeDescription(t: I18n['t'], w: { type: DayType; flags?: Pick<W
   return t(`type.${w.type}.desc`);
 }
 
-export function muscleList(t: I18n['t'], muscles: readonly Muscle[], lang: string): string {
-  const names = muscles.map((m) => t(`muscle.${m}`));
-  try {
-    return new Intl.ListFormat(lang, { style: 'short', type: 'unit' }).format(names);
-  } catch {
-    return names.join(', ');
-  }
+/**
+ * "back, biceps, grip, core" in every language. (Intl.ListFormat's "unit" lists
+ * drop the commas in Russian and Turkish, and "conjunction" adds "and".)
+ */
+export function muscleList(t: I18n['t'], muscles: readonly Muscle[]): string {
+  return muscles.map((m) => t(`muscle.${m}`)).join(', ');
 }
 
 /** 95 → "1:35", 40 → "0:40". */

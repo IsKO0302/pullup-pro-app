@@ -79,9 +79,9 @@ function Detail({ thought }: { thought: Thought }) {
     <div className="screen-pad thought-detail">
       <Back />
       <article className="thought-detail__body" aria-labelledby="thought-text">
-        <p className="t-eyebrow">
+        <h1 className="t-eyebrow">
           {daily.id === thought.id ? `${t('thoughts.ofDay')} · ` : ''}{t(`category.${thought.category}`)}
-        </p>
+        </h1>
         <blockquote id="thought-text" className={`thought-detail__text thought-detail__text--${thought.format}`} data-thought-id={thought.id}>
           {text}
         </blockquote>
