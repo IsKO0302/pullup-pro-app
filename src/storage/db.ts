@@ -41,7 +41,8 @@ export const MIGRATIONS: readonly Migration[] = [
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;
 
-export const DEFAULT_DB_NAME = 'pullup-pro';
+// Distinct from the PULLUP PRO 2.0 web app, which also uses "pullup-pro" on the shared github.io origin.
+export const DEFAULT_DB_NAME = 'pullup-pro-app';
 
 export type StorageErrorCode = 'unavailable' | 'blocked' | 'quota' | 'aborted' | 'unknown';
 
