@@ -1,4 +1,4 @@
-import { daysBetween, weekdayIndex, weekStart, type LocalDate } from './time';
+import { addDays, daysBetween, weekdayIndex, weekStart, type LocalDate } from './time';
 import type { DayType } from './types';
 
 const P: DayType = 'pullStrength';
@@ -48,4 +48,14 @@ export function isLighterWeek(startDate: LocalDate, date: LocalDate): boolean {
 export function isMaxTestWeek(startDate: LocalDate, date: LocalDate): boolean {
   const w = programWeek(startDate, date);
   return w > 0 && w % 4 === 0;
+}
+
+/** The next planned training day strictly after `date` (within a week). */
+export function nextScheduled(daysPerWeek: number, date: LocalDate): { date: LocalDate; type: DayType } | null {
+  for (let i = 1; i <= 7; i++) {
+    const d = addDays(date, i);
+    const type = scheduledType(daysPerWeek, d);
+    if (type) return { date: d, type };
+  }
+  return null;
 }

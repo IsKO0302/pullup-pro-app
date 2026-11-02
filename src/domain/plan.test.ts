@@ -63,6 +63,14 @@ describe('planDay — basics', () => {
     expect(planDay(bar, h, addDays(WEEK1, 7)).level).toBe(3);
   });
 
+  it('"Train anyway" on a rest day brings the next planned workout forward', () => {
+    const saturday = addDays(WEEK1, 5);
+    const early = planDay(bar, L2, saturday, { variant: 'early' });
+    expect(early.type).toBe('pullStrength');
+    expect(early.flags.maxTestSuggested).toBe(false);
+    expect(planDay(bar, L2, addDays(WEEK1, 2), { variant: 'early' }).type).toBe('pullVolume');
+  });
+
   it('sizes sessions by type', () => {
     expect(sessionMinutesFor('short', 45)).toBe(10);
     expect(sessionMinutesFor('light', 45)).toBe(10);

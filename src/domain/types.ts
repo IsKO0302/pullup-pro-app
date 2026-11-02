@@ -141,8 +141,16 @@ export interface CompletedWorkout {
   finishedEarly: boolean;
 }
 
+/**
+ * How a session was started: planned = the rotation (light on rest days) ·
+ * short = 10-min block · light = technique + mobility · maxTest = the optional
+ * test · early = the next planned workout, brought forward to a rest day.
+ */
+export type SessionVariant = 'planned' | 'short' | 'light' | 'maxTest' | 'early';
+
 export interface ActiveSession {
   id: string;
+  variant: SessionVariant;
   plan: Workout;
   startedAtUtc: string;
   localDate: LocalDate;
@@ -155,6 +163,8 @@ export interface ActiveSession {
   pausedAtUtc: string | null;
   /** Seconds of rest left when paused during rest. */
   pausedRestLeftSec: number | null;
+  /** Total paused time (excluded from the workout duration). */
+  pausedSec: number;
   /** Start of the running hold timer for time-based exercises. */
   holdStartedAtUtc: string | null;
   log: LoggedExercise[];

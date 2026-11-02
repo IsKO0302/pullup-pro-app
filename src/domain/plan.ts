@@ -3,14 +3,14 @@ import { estimateMinutes, fitDuration, type FitItem } from './duration';
 import { EMPTY_HISTORY, TRAINING_TYPES, isTraining, workoutsBefore, type History } from './history';
 import { levelFromMax, workingMax } from './level';
 import { muscleUpPath } from './paths';
-import { isBalancedTemplate, isLighterWeek, isMaxTestWeek, scheduledType } from './schedule';
+import { isBalancedTemplate, isLighterWeek, isMaxTestWeek, nextScheduled, scheduledType } from './schedule';
 import { LEGS_CORE, LIGHT, PULL_STRENGTH, PULL_VOLUME, PUSH, RECOVERY, balanceSlots, skillSlot, type SlotOption, type SlotSpec } from './slots';
 import { addDays, daysBetween, type LocalDate } from './time';
 import type {
-  CompletedWorkout, DayType, Equipment, ExerciseId, Level, LoggedExercise, Muscle, PlannedExercise, Profile, Workout,
+  CompletedWorkout, DayType, Equipment, ExerciseId, Level, LoggedExercise, Muscle, PlannedExercise, Profile, SessionVariant, Workout,
 } from './types';
 
-export type Variant = 'planned' | 'short' | 'light' | 'maxTest';
+export type Variant = SessionVariant;
 
 export interface PlanOptions {
   variant?: Variant;
@@ -140,7 +140,8 @@ export function lastSlotLog(workouts: readonly CompletedWorkout[], slot: string)
   for (let i = workouts.length - 1; i >= 0; i--) {
     const w = workouts[i]!;
     if (!isNormal(w)) continue;
-    const ex = w.exercises.find((e) => e.slot === slot);
+    // A slot that was not reached (finished early) carries no information.
+    const ex = w.exercises.find((e) => e.slot === slot && e.sets.length > 0);
     if (ex) return ex;
   }
   return null;
@@ -284,7 +285,10 @@ export function planDay(profile: Profile, history: History = EMPTY_HISTORY, date
   const variant = opts.variant ?? 'planned';
   const ctx = context(profile, history, date);
   const scheduled = scheduledType(profile.daysPerWeek, date);
-  let type: DayType = variant === 'planned' ? scheduled ?? 'light' : variant;
+  let type: DayType =
+    variant === 'planned' ? scheduled ?? 'light'
+    : variant === 'early' ? nextScheduled(profile.daysPerWeek, date)?.type ?? 'light'
+    : variant;
   if ((type === 'pullStrength' || type === 'maxTest') && strengthWithin48h(ctx, history)) type = 'pullVolume';
   let noPullEquipment = false;
   if (!ctx.canPull && PULL_TYPES.includes(type)) {

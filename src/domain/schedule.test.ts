@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { START } from '../test/fixtures';
-import { WEEK_TEMPLATES, clampDays, isBalancedTemplate, isLighterWeek, isMaxTestWeek, programWeek, scheduledType } from './schedule';
+import { WEEK_TEMPLATES, clampDays, isBalancedTemplate, isLighterWeek, isMaxTestWeek, nextScheduled, programWeek, scheduledType } from './schedule';
 import { addDays } from './time';
 import { DAYS_PER_WEEK, type DayType } from './types';
 
@@ -34,6 +34,12 @@ describe('weekly templates', () => {
       expect(scheduledType(days, START)).toBe('pullStrength');
       expect(scheduledType(days, addDays(START, 6))).toBe(days === 7 ? 'recovery' : null);
     }
+  });
+
+  it('finds the next planned training day', () => {
+    expect(nextScheduled(4, addDays(START, 4))).toEqual({ date: addDays(START, 7), type: 'pullStrength' });
+    expect(nextScheduled(4, START)).toEqual({ date: addDays(START, 1), type: 'push' });
+    expect(nextScheduled(2, addDays(START, 3))).toEqual({ date: addDays(START, 7), type: 'pullStrength' });
   });
 
   it('marks 2–3 day weeks as balanced (accessories inside the pull days)', () => {

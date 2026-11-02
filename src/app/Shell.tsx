@@ -1,9 +1,11 @@
 import { Activity, Quote, Sun, User } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
+import { CompletionScreen } from '../features/completion/CompletionScreen';
 import { Onboarding } from '../features/onboarding/Onboarding';
 import { LanguageScreen } from '../features/onboarding/LanguageScreen';
 import { WelcomeScreen } from '../features/onboarding/WelcomeScreen';
 import { TodayScreen } from '../features/today/TodayScreen';
+import { WorkoutScreen } from '../features/workout/WorkoutScreen';
 import { YouScreen } from '../features/you/YouScreen';
 import { BottomNav, type NavItem } from '../ui';
 import { useI18n } from './i18n';
@@ -22,12 +24,16 @@ export function Shell({ route }: { route: string[] }) {
   const tab: Tab = isTab(page) ? page : 'today';
 
   useEffect(() => {
-    document.title = profile?.onboarding === 'done' ? `${t(`nav.${tab}`)} · PULLUP PRO` : 'PULLUP PRO';
-  }, [t, tab, profile?.onboarding]);
+    const name = page === 'workout' ? t('workout.progress') : page === 'done' ? t('done.title') : t(`nav.${tab}`);
+    document.title = profile?.onboarding === 'done' ? `${name} · PULLUP PRO` : 'PULLUP PRO';
+  }, [t, tab, page, profile?.onboarding]);
 
   if (!profile) return <LanguageScreen />;
   if (page === 'welcome') return <WelcomeScreen onContinue={() => navigate('you', { replace: true })} />;
   if (profile.onboarding !== 'done') return <Onboarding profile={profile} />;
+  // Full-screen moments: no bottom navigation.
+  if (page === 'workout') return <div className="app"><WorkoutScreen /></div>;
+  if (page === 'done' && route[1]) return <div className="app"><main><CompletionScreen id={route[1]} /></main></div>;
 
   const icon = (node: ReactNode) => node;
   const items: NavItem[] = [

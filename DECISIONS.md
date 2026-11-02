@@ -73,3 +73,18 @@ Return after 7+ days without real training (light/recovery extras do not count) 
 
 ### D21 · Without a bar or rings: strength days → legs/core, volume days → push
 So the two still alternate in every template; the plan carries a `noPullEquipment` flag that TODAY explains. "Short version" stays a 10-minute session built on the push main exercise.
+
+### D22 · A workout is committed the moment the last set is logged; mood and note are edited afterwards
+The completion screen shows a workout that is already saved (one atomic write that also clears the active session). Mood and the one-line note update that record. Closing the app on the completion screen loses nothing.
+
+### D23 · Only logged sets are saved; unreached sets are not recorded as skipped work
+"Finish now" keeps the sets that were really done and marks the workout `finishedEarly` ("what you did still counts"). Planned-but-unreached sets are counted only to show "4 / 13" on the completion screen — no fake numbers, no penalty.
+
+### D24 · On a planned rest day TODAY offers light mobility first and "Train anyway: {next workout}" as a quiet link
+The "early" variant pulls the next scheduled workout forward; the 48 h heavy-pulling guard and all reductions still apply. Planned rest is never shown as missed.
+
+### D25 · Swapping an exercise is allowed only before its first set; "feeling off" only before the first set of the session
+Changing the exercise mid-way would mix two exercises in one log entry and corrupt progression. "Feeling off" rebuilds the whole plan, so it is offered only on the pre-start view and can be switched back.
+
+### D26 · The session is persisted after every change (set, rest, pause, timer)
+Rest and hold timers are stored as UTC timestamps, so a reload, a killed tab or a locked phone resumes at the correct second. Pausing shifts both. The screen wake lock is requested while the workout screen is open (where supported).
