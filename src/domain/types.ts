@@ -16,9 +16,14 @@ export const GOALS: readonly Goal[] = ['firstPullup', 'morePullups', 'muscleUp',
 export type Level = 0 | 1 | 2 | 3 | 4;
 export type Pattern = 'pull' | 'push' | 'legs' | 'core' | 'mobility' | 'skill';
 export type Unit = 'reps' | 'seconds';
+export const UNITS: readonly Unit[] = ['reps', 'seconds'];
 export type Muscle =
   | 'back' | 'biceps' | 'forearms' | 'shoulders' | 'chest' | 'triceps' | 'core'
   | 'glutes' | 'quads' | 'hamstrings' | 'calves' | 'hips' | 'spine';
+export const MUSCLES: readonly Muscle[] = [
+  'back', 'biceps', 'forearms', 'shoulders', 'chest', 'triceps', 'core',
+  'glutes', 'quads', 'hamstrings', 'calves', 'hips', 'spine',
+];
 
 export const EXERCISE_IDS = [
   // pull
@@ -46,6 +51,7 @@ export type RecoveryReason = 'tired' | 'pain' | 'ill' | 'busy';
 export const RECOVERY_REASONS: readonly RecoveryReason[] = ['tired', 'pain', 'ill', 'busy'];
 
 export type OnboardingStep = 'welcome' | 'setup1' | 'setup2' | 'setup3' | 'done';
+export const ONBOARDING_STEPS: readonly OnboardingStep[] = ['welcome', 'setup1', 'setup2', 'setup3', 'done'];
 
 export interface Profile {
   name: string;
@@ -83,6 +89,7 @@ export interface MaxEntry extends EventStamp {
 }
 
 export type ExerciseRole = 'main' | 'secondary' | 'accessory' | 'warmup' | 'test' | 'cooldown';
+export const EXERCISE_ROLES: readonly ExerciseRole[] = ['main', 'secondary', 'accessory', 'warmup', 'test', 'cooldown'];
 
 export interface PlannedExercise {
   exerciseId: ExerciseId;
@@ -134,6 +141,7 @@ export interface LoggedExercise {
 }
 
 export type Mood = 1 | 2 | 3 | 4 | 5;
+export const MOODS: readonly Mood[] = [1, 2, 3, 4, 5];
 
 export interface CompletedWorkout {
   id: string;
@@ -158,6 +166,7 @@ export interface CompletedWorkout {
  * test · early = the next planned workout, brought forward to a rest day.
  */
 export type SessionVariant = 'planned' | 'short' | 'light' | 'maxTest' | 'early';
+export const SESSION_VARIANTS: readonly SessionVariant[] = ['planned', 'short', 'light', 'maxTest', 'early'];
 
 export interface ActiveSession {
   id: string;

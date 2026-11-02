@@ -5,6 +5,7 @@
 import { DEFAULT_DB_NAME } from '../../storage/db';
 import { replaceAll } from '../../storage/repo';
 import { storeLang } from '../config';
+import { simulateUpdateForTest } from '../pwa';
 import { demoData, type DemoOptions } from './demo';
 
 declare global {
@@ -13,6 +14,9 @@ declare global {
       seedDemo: (opts: Partial<DemoOptions> & { today: string }) => Promise<void>;
       /** Lays out every thought on every poster variant with the real fonts; returns misfits. */
       posterSweep: () => Promise<string[]>;
+      /** Pretends a new version is waiting; `updatesApplied` counts "Restart now" taps that went through. */
+      simulateUpdate: () => void;
+      updatesApplied: number;
     };
   }
 }
@@ -29,6 +33,12 @@ export function installTestHooks(getDb: () => IDBDatabase | null, reload: () => 
       if (data.profile) storeLang(data.profile.lang);
       await reload();
     },
+    simulateUpdate() {
+      simulateUpdateForTest(async () => {
+        if (window.__pullupTest) window.__pullupTest.updatesApplied += 1;
+      });
+    },
+    updatesApplied: 0,
     async posterSweep() {
       const { sweepPosters } = await import('../../features/poster/sweep');
       return sweepPosters();

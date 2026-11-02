@@ -8,14 +8,13 @@ import { resolveThoughts, thoughtsIn } from '../../domain/thoughts';
 import { THOUGHT_CATEGORIES, type Thought, type ThoughtCategory } from '../../domain/types';
 import { Button, ChoiceGroup, EmptyState } from '../../ui';
 import { useThoughtOfDay } from './daily';
+import { thoughtsMemory, type ThoughtsTab } from './memory';
 import { ThoughtDetail } from './ThoughtDetail';
 import './thoughts.css';
 
-type Tab = 'all' | 'favorites' | 'recent';
+type Tab = ThoughtsTab;
 const TABS: readonly Tab[] = ['all', 'favorites', 'recent'];
-
-/** Remembered while the app is open, so "back" from a thought lands where you were. */
-const memory: { tab: Tab; topic: ThoughtCategory | null; scrollY: number; restore: boolean } = { tab: 'all', topic: null, scrollY: 0, restore: false };
+const memory = thoughtsMemory;
 
 export default function ThoughtsPage({ id }: { id?: string }) {
   if (id) return <ThoughtDetail key={id} id={id} />;

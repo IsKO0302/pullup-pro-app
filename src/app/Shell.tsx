@@ -6,7 +6,6 @@ import { LanguageScreen } from '../features/onboarding/LanguageScreen';
 import { WelcomeScreen } from '../features/onboarding/WelcomeScreen';
 import { TodayScreen } from '../features/today/TodayScreen';
 import { WorkoutScreen } from '../features/workout/WorkoutScreen';
-import { YouScreen } from '../features/you/YouScreen';
 import { BottomNav, Skeleton, type NavItem } from '../ui';
 import { useI18n } from './i18n';
 import { navigate } from './router';
@@ -16,6 +15,7 @@ import { useStore } from './store';
 const ProgressPage = lazy(() => import('../features/progress/ProgressPage'));
 const ThoughtsPage = lazy(() => import('../features/thoughts/ThoughtsPage'));
 const PosterPage = lazy(() => import('../features/poster/PosterPage'));
+const YouScreen = lazy(() => import('../features/you/YouScreen'));
 
 const TABS = ['today', 'progress', 'thoughts', 'you'] as const;
 type Tab = (typeof TABS)[number];
@@ -61,7 +61,11 @@ export function Shell({ route }: { route: string[] }) {
   let screen: ReactNode;
   switch (tab) {
     case 'you':
-      screen = <YouScreen />;
+      screen = (
+        <Suspense fallback={<div className="screen-pad"><Skeleton height={32} width="50%" /></div>}>
+          <YouScreen />
+        </Suspense>
+      );
       break;
     case 'progress':
       screen = (

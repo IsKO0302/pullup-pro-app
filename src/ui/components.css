@@ -82,6 +82,9 @@
 }
 .banner__body { flex: 1; min-width: 0; }
 .banner__body p + p { color: var(--text-2); font-size: 0.875rem; line-height: 1.25rem; }
+.banner--stack { flex-wrap: wrap; align-items: flex-start; padding: var(--space-4); }
+.banner--stack > :last-child:not(.banner__body) { flex-basis: 100%; }
+.banner__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .empty { text-align: center; padding: var(--space-6) var(--space-4); display: grid; gap: var(--space-3); justify-items: center; }
 .empty__icon { color: var(--text-3); }
 .empty__title { font-weight: 600; }

@@ -127,3 +127,30 @@ From the completion screen the poster can show "DATE · N PULL-UPS" (or reps / m
 
 ### D39 · Share an image when the device can, otherwise save it
 The button says "Share image" only if `navigator.canShare({ files })` is true, otherwise "Save image" (download). A cancelled share is silent; any other share error falls back to saving the file. No button is shown that cannot do what it says.
+
+### D40 · One readable export file; facts about this browser are not exported
+`pullup-pro-backup-YYYY-MM-DD.json`, 2-space JSON: `format: "pullup-pro-export"`, schema version, app version, `exportedAt` (UTC) + local date + time zone, a summary (workouts, notes, favorites, recovery days) and the data. Storage protection is a property of this browser, not of the person, so it is never exported and always kept on import. The export time is written into the data first (`lastExportAtUtc`), so export → reset → import gives back exactly the same state (e2e-tested).
+
+### D41 · Validate the whole file before writing anything
+Import parses, checks format and version, migrates and validates every record (ids, local dates, UTC times, enums, duplicates) in memory; only a fully valid result reaches the database. Harmless gaps get defaults, unknown keys are dropped. Errors are short and say what is wrong ("not a PULLUP PRO file", "made by a newer version", "damaged at workouts[3].sets") and always end with "Your data was not changed." A file from a newer schema is refused rather than guessed. File migrations mirror the database migrations step by step (a test proves migrating a v1 file equals migrating a v1 database).
+
+### D42 · Merge is the default, and this device wins
+Merge adds what is missing (workouts by id, recovery / thought days by local date, favorites, max entries) and never overwrites: the same workout or day already on this device keeps its version (edited notes, today's pinned thought). Profile and settings come from the file only when this device has no finished profile. "Recently viewed" is the union, newest first, capped at 30. Replace gives the device exactly the file's data. On an empty device there is one button, "Restore this data". Merging the same file twice changes nothing (tested).
+
+### D43 · Automatic snapshots in the same transaction
+Import, reset and snapshot-restore all go through `applyWithSnapshot`: ONE IndexedDB readwrite transaction reads the current data, stores it as a snapshot, prunes to the newest 3 and writes the new data — any failure aborts everything, so there is never a change without its safety copy or a copy without the change. Nothing is copied when there is nothing to protect (fresh install). Restoring a snapshot runs it through the same validation and migration as a file, so copies taken under an older schema stay restorable; the state being replaced is snapshotted too, so a restore can itself be undone.
+
+### D44 · Reset: two steps, an export offer, and undo on the first screen
+Reset is the only destructive action with two confirmations (the first sheet offers "Export first"). It returns to a first launch, keeping only the storage-protection fact. Because the profile is gone, the language screen offers "Undo the reset from {date}" (when the newest snapshot is a pre-reset copy) and "Restore from a backup file" — no hunting for a settings screen that no longer exists.
+
+### D45 · Storage protection is requested once, after the first workout
+Browsers may delete site data under storage pressure. `navigator.storage.persist()` is requested after the first completed workout — the moment there is something worth protecting — instead of on first launch. The answer is stored; YOU shows the live status (protected / not protected with "Ask again" / not supported) and recommends installing the app and exporting now and then.
+
+### D46 · Backup reminder: every 30 days, TODAY and YOU only
+Due when there is at least one workout and 30 days have passed since the latest of: last export (or the first workout if never exported) and the last "Later". Shown as one calm banner (Export / Later) on TODAY below the week strip and in YOU → Data; never during a workout, never as a notification.
+
+### D47 · Updates never interrupt a workout
+`registerType: 'prompt'`: a new service worker waits. "Update ready · Restart now" appears on TODAY and YOU only when no session is active; with an open session nothing appears on TODAY and YOU explains that the update waits until the workout is finished. `applyUpdate` itself refuses while a session exists (belt and braces). The installed app checks for a new version hourly while online.
+
+### D48 · Settings save instantly; YOU is code-split
+Every YOU control saves on change (the name on blur / Enter, with a quiet "Saved") — no Save buttons, no confirmation dialogs for reversible changes. Days-per-week changes go through the rhythm history (D29), so past weeks keep their labels. "Save new max" adds a self-reported entry for strict pull-ups; the value shown is the current working max (latest setup answer / self-report / max test, raised by any later strict set, see `domain/level.ts`) with its source. YOU, import and the snapshot sheets are lazy chunks, keeping the initial JS well under budget.

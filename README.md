@@ -27,6 +27,10 @@ React + TypeScript (strict) + Vite, installable PWA, local data only (IndexedDB)
 
 On Windows PowerShell with a custom browser: `$env:CHROMIUM_PATH="C:\path\to\chrome.exe"; npm run e2e`.
 
+`e2e/pwa.spec.ts` checks installability, offline use and a real service-worker update: it
+copies the e2e build to a temporary folder, serves it from its own static server on a
+free port, modifies `sw.js` to simulate the next release and removes the folder afterwards.
+
 ## Data safety
 
 - The real profile lives in the IndexedDB database `pullup-pro` in your browser.
@@ -34,8 +38,31 @@ On Windows PowerShell with a custom browser: `$env:CHROMIUM_PATH="C:\path\to\chr
   (`pullup-pro-e2e`, see `.env.e2e`), and every test runs in a fresh, isolated browser
   context. Unit tests use an in-memory IndexedDB with unique names. No test can touch
   your real data.
-- Back up regularly: YOU → Data → Export everything. Import always takes an internal
-  snapshot first.
+
+### Backup, import, reset
+
+- **Export:** YOU → Data → "Export everything" downloads `pullup-pro-backup-YYYY-MM-DD.json`
+  (readable JSON with format id, schema version, app version, export time in UTC + local
+  date + time zone). A calm reminder appears on TODAY / YOU when 30 days passed since the
+  last export.
+- **Import:** YOU → Data → Import shows a preview first. *Merge* (default) only adds what
+  is missing on this device; *Replace* makes this device exactly the file. Damaged,
+  foreign or newer-version files are refused and nothing changes.
+- **Snapshots:** before every import, reset or restore the current data is copied
+  automatically (newest 3 kept, same database transaction as the change). YOU → Data →
+  Snapshots → Restore brings a copy back.
+- **Reset everything** needs two confirmations. Right after a reset the first screen offers
+  "Undo the reset" and "Restore from a backup file".
+- **Storage protection:** after the first workout the app asks the browser to keep its
+  data (`navigator.storage.persist()`); the status is shown in YOU → Data. Installing the
+  app to the home screen usually helps. Still export now and then — the backup file is
+  the only copy outside this browser.
+
+### Offline and updates
+
+The production build precaches the whole app (service worker), so it opens and works
+without a network after the first visit. A new version downloads in the background and
+is applied only when you tap "Restart now" on TODAY or YOU — never during a workout.
 
 ### Demo data (development only)
 

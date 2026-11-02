@@ -14,6 +14,7 @@ import './ui/base.css';
 import './ui/components.css';
 import './app/app.css';
 import { App } from './app/App';
+import { registerServiceWorker } from './app/pwa';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element missing');
@@ -22,3 +23,4 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+registerServiceWorker();

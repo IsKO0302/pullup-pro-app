@@ -4,20 +4,28 @@ import { navigate } from '../../app/router';
 import { useStore } from '../../app/store';
 import { recordsOf } from '../../domain/stats';
 import { completionThoughtId, thoughtById } from '../../domain/thoughts';
-import type { CompletedWorkout, Mood } from '../../domain/types';
+import { MOODS, type CompletedWorkout, type Mood } from '../../domain/types';
+import { requestPersistence } from '../../storage/persist';
 import { Button, Chip } from '../../ui';
 import { typeLabel, useExerciseText } from '../common/labels';
 import { WorkoutStats } from '../common/WorkoutStats';
 import './completion.css';
 
-const MOODS: readonly Mood[] = [1, 2, 3, 4, 5];
+/** Asked once, after the first completed workout (spec §8); the answer is recorded in meta.persist. */
+let persistAsked = false;
 
 export function CompletionScreen({ id }: { id: string }) {
-  const { data } = useStore();
+  const { data, actions } = useStore();
   const w = data.workouts.find((x) => x.id === id) ?? null;
   useEffect(() => {
     if (!w) navigate('today', { replace: true });
   }, [w]);
+  const needsPersist = w !== null && data.meta.persist === null;
+  useEffect(() => {
+    if (!needsPersist || persistAsked) return;
+    persistAsked = true;
+    void requestPersistence().then((persist) => actions.saveMeta({ persist }));
+  }, [needsPersist, actions]);
   if (!w) return null;
   return <Completion key={w.id} workout={w} />;
 }

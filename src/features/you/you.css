@@ -1,0 +1,13 @@
+/* YOU: quiet settings list. Every control saves on change. */
+.you { display: flex; flex-direction: column; }
+.you > .banner, .you > [data-testid='update-waits'] { margin-top: var(--space-4); }
+.you__section > * { margin: 0; }
+.you__item { display: flex; flex-direction: column; gap: var(--space-2); }
+.you__item > * { margin: 0; }
+.you__label { font-size: 0.9375rem; line-height: 1.375rem; font-weight: 550; color: var(--text); }
+.you__item .stepper { align-self: center; }
+.you__choices { display: flex; flex-direction: column; gap: var(--space-4); }
+.you__choice { display: flex; flex-direction: column; gap: var(--space-2); }
+.you__choice > *, .you__choices > p { margin: 0; }
+.you__status { margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.875rem; color: var(--text); }
+.you__status--error { border-color: var(--danger); }

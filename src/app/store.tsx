@@ -25,9 +25,18 @@ export interface StoreActions {
   saveThoughtDay: (d: ThoughtDay) => Promise<boolean>;
   saveFavorites: (ids: string[]) => Promise<boolean>;
   saveRecent: (list: RecentThought[]) => Promise<boolean>;
+  /**
+   * Import / reset / restore: ONE transaction that snapshots the current data
+   * first, then writes `transform(current)`. Memory is re-read from disk after.
+   */
+  applyData: (reason: repo.SnapshotReason, transform: (current: AppData) => AppData) => Promise<ApplyOutcome>;
+  listSnapshots: () => Promise<repo.SnapshotInfo[]>;
+  getSnapshot: (id: string) => Promise<repo.Snapshot | null>;
   /** Re-reads everything from IndexedDB (after import / reset / restore). */
   reload: () => Promise<void>;
 }
+
+export type ApplyOutcome = { ok: true; data: AppData; snapshotId: string | null } | { ok: false; detail: string };
 
 export interface StoreValue {
   status: StoreStatus;
@@ -139,6 +148,31 @@ export function StoreProvider({ dbName, children }: { dbName: string; children: 
     ),
     saveFavorites: (ids) => run((db) => repo.putKv(db, 'favorites', ids), (d) => ({ ...d, favorites: ids })),
     saveRecent: (list) => run((db) => repo.putKv(db, 'recent', list), (d) => ({ ...d, recent: list })),
+    applyData: (reason, transform) => {
+      const task = queue.current.then(async (): Promise<ApplyOutcome> => {
+        const db = dbRef.current;
+        if (!db) return { ok: false, detail: 'database not open' };
+        try {
+          const res = await repo.applyWithSnapshot(db, reason, new Date().toISOString(), transform, repo.isEmptyData);
+          const loaded = await repo.loadAll(db);
+          dataRef.current = loaded;
+          setData(loaded);
+          return { ok: true, data: loaded, snapshotId: res.snapshotId };
+        } catch (err) {
+          return { ok: false, detail: describeError(err) };
+        }
+      });
+      queue.current = task;
+      return task;
+    },
+    listSnapshots: async () => {
+      const db = dbRef.current;
+      return db ? repo.listSnapshots(db) : [];
+    },
+    getSnapshot: async (id) => {
+      const db = dbRef.current;
+      return db ? repo.getSnapshot(db, id) : null;
+    },
     reload: async () => {
       await queue.current;
       const db = dbRef.current;

@@ -40,9 +40,10 @@ export function EmptyState({ icon, title, text, action }: { icon?: ReactNode; ti
   );
 }
 
-export function Banner({ icon, title, text, action, role }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode; role?: 'status' | 'alert' }) {
+/** `stack` puts the actions on their own row (for two buttons or long translations). */
+export function Banner({ icon, title, text, action, role, stack, testId }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode; role?: 'status' | 'alert'; stack?: boolean; testId?: string }) {
   return (
-    <div className="banner" role={role}>
+    <div className={cx('banner', stack && 'banner--stack')} role={role} data-testid={testId}>
       {icon && <span aria-hidden className="muted">{icon}</span>}
       <div className="banner__body">
         <p>{title}</p>

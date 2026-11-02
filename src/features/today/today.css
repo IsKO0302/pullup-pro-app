@@ -41,3 +41,5 @@
 .today-thought__label { display: inline-flex; align-items: center; gap: 2px; }
 .today-thought__text { font-family: var(--font-serif); font-weight: 500; font-size: 1.5rem; line-height: 1.95rem; overflow-wrap: break-word; }
 .today-thought:hover .today-thought__label { color: var(--text); }
+.today__notices { display: flex; flex-direction: column; gap: var(--space-3); }
+.today__notices:empty { display: none; }
