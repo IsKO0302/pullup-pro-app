@@ -7,7 +7,7 @@ import {
   DAY_TYPES, DAYS_PER_WEEK, DEFAULT_SETTINGS, EQUIPMENT, EXERCISE_IDS, EXERCISE_ROLES, GOALS, LANGS, MOODS, MUSCLES,
   ONBOARDING_STEPS, RECOVERY_REASONS, SESSION_MINUTES, SESSION_VARIANTS, UNITS, emptyAppData,
   type ActiveSession, type AppData, type CompletedWorkout, type Level, type LoggedExercise, type LoggedSet, type MaxEntry,
-  type Meta, type PlannedExercise, type Profile, type RecentThought, type RecoveryDay, type RhythmChange, type Settings,
+  type Meta, type PlannedExercise, type Profile, type RecentThought, type RecoveryDay, type RhythmChange, type RotationState, type Settings,
   type ThoughtDay, type Workout, type WorkoutFlags,
 } from '../domain/types';
 import type { LocalDate } from '../domain/time';
@@ -38,6 +38,11 @@ export const FILE_MIGRATIONS: readonly FileMigration[] = [
         : d.workouts,
       thoughtDays: d.thoughtDays ?? [],
     }),
+  },
+  {
+    version: 3,
+    description: 'v2 → v3: rotation checkpoint (null = derived from the history on the next start).',
+    up: (d) => ({ ...d, rotation: d.rotation ?? null }),
   },
 ];
 
@@ -203,6 +208,20 @@ const maxEntry = shape<MaxEntry>({ atUtc: utc, localDate, timeZone, value: int(0
 const recoveryDay = shape<RecoveryDay>({ atUtc: utc, localDate, timeZone, reason: or(nullable(oneOf(RECOVERY_REASONS)), null) });
 const thoughtDay = shape<ThoughtDay>({ localDate, thoughtId: id, atUtc: utc });
 const recent = shape<RecentThought>({ id, atUtc: utc });
+const rotationState = shape<RotationState>({
+  rules: int(1, 1000),
+  asOf: localDate,
+  startDate: localDate,
+  weekStart: localDate,
+  activeDaysPerWeek: oneOf(DAYS_PER_WEEK),
+  plannedTrainingSessionsPerWeek: int(0, 7),
+  scheduleCursor: int(0, 7),
+  rotationDays: oneOf(DAYS_PER_WEEK),
+  trainingRotationIndex: int(0, 6),
+  completedTrainingSessions: int(0, 7),
+  completedRecoverySessions: int(0, 7),
+  digest: text(64),
+});
 const fileMeta = shape<Omit<Meta, 'persist'>>({ lastExportAtUtc: or(nullable(utc), null), reminderDismissedAtUtc: or(nullable(utc), null) });
 
 const exportData = shape<ExportData>({
@@ -215,6 +234,7 @@ const exportData = shape<ExportData>({
   recent: or(list(recent, 1000), []),
   thoughtDays: uniqueBy(or(list(thoughtDay), []), (t) => t.localDate),
   active: or(nullable(active), null),
+  rotation: or(nullable(rotationState), null),
   meta: or(fileMeta, { lastExportAtUtc: null, reminderDismissedAtUtc: null }),
 });
 
@@ -293,6 +313,8 @@ export function mergeInto(current: AppData, incoming: ExportData): AppData {
     settings: hasProfile ? current.settings : incoming.settings,
     meta: current.meta,
     active: current.active,
+    // This device's checkpoint stays; it is re-derived if the merged history no longer matches it.
+    rotation: current.rotation,
     favorites: unionBy(current.favorites, incoming.favorites, (f) => f),
     recent: [...recentById.values()].sort((a, b) => b.atUtc.localeCompare(a.atUtc)).slice(0, RECENT_LIMIT),
     maxEntries: unionBy(current.maxEntries, incoming.maxEntries, (m) => `${m.atUtc}|${m.source}|${m.value}`).sort((a, b) => a.atUtc.localeCompare(b.atUtc)),

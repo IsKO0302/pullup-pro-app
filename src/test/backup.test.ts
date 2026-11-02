@@ -54,7 +54,7 @@ describe('export file', () => {
     expect(text).toContain('\n  "schemaVersion": ');
     const json = JSON.parse(text);
     expect(json).toMatchObject({ format: EXPORT_FORMAT, schemaVersion: SCHEMA_VERSION, appVersion: '1.0.0', exportedAt: STAMP.atUtc, exportedLocalDate: TODAY, timeZone: 'Europe/Istanbul' });
-    expect(Object.keys(json.data).sort()).toEqual(['active', 'favorites', 'maxEntries', 'meta', 'profile', 'recent', 'recoveryDays', 'settings', 'thoughtDays', 'workouts']);
+    expect(Object.keys(json.data).sort()).toEqual(['active', 'favorites', 'maxEntries', 'meta', 'profile', 'recent', 'recoveryDays', 'rotation', 'settings', 'thoughtDays', 'workouts']);
     expect(json.summary).toEqual({ workouts: data.workouts.length, notes: data.workouts.filter((w) => w.note).length, favorites: 2, recoveryDays: data.recoveryDays.length });
     expect(json.data.meta).toEqual({ lastExportAtUtc: STAMP.atUtc, reminderDismissedAtUtc: null }); // no device facts
     expect(exportFileName(TODAY)).toBe('pullup-pro-backup-2026-03-18.json');
@@ -139,6 +139,7 @@ describe('import validation', () => {
       j.schemaVersion = 1;
       for (const w of j.data.workouts) delete w.timeZone;
       delete j.data.thoughtDays;
+      delete j.data.rotation;
     });
     const res = parseExport(raw);
     expect(res.ok).toBe(true);
@@ -146,8 +147,19 @@ describe('import validation', () => {
     expect(res.file.schemaVersion).toBe(SCHEMA_VERSION);
     expect(res.file.data.workouts.every((w) => w.timeZone === null)).toBe(true);
     expect(res.file.data.thoughtDays).toEqual([]);
-    expect(migrateFileData({ workouts: [{ id: 'a', timeZone: 'UTC' }] }, 1)).toEqual({ workouts: [{ id: 'a', timeZone: 'UTC' }], thoughtDays: [] });
+    expect(res.file.data.rotation).toBeNull();
+    expect(migrateFileData({ workouts: [{ id: 'a', timeZone: 'UTC' }] }, 1)).toEqual({ workouts: [{ id: 'a', timeZone: 'UTC' }], thoughtDays: [], rotation: null });
+    expect(migrateFileData({ workouts: [] }, 2)).toEqual({ workouts: [], rotation: null });
     expect(migrateFileData({ workouts: [] }, SCHEMA_VERSION)).toEqual({ workouts: [] });
+  });
+
+  it('carries the rotation checkpoint and refuses a damaged one', () => {
+    expect(data.rotation).not.toBeNull();
+    expect(fileOf(data).data.rotation).toEqual(data.rotation);
+    expect(fail(tamper(data, (j) => { j.data.rotation.trainingRotationIndex = 9; }))?.detail).toBe('rotation.trainingRotationIndex');
+    expect(fail(tamper(data, (j) => { j.data.rotation.activeDaysPerWeek = 8; }))?.detail).toBe('rotation.activeDaysPerWeek');
+    const without = parseExport(tamper(data, (j) => { delete j.data.rotation; }));
+    expect(without.ok && without.file.data.rotation).toBeNull();
   });
 
   it('has one file migration for every database migration after v1', () => {
@@ -177,6 +189,11 @@ describe('merge, replace, reset', () => {
     expect(merged.favorites).toEqual(['life-01', 'time-02', 'hope-01']);
     expect(newWorkoutsIn(mine, file)).toBe(theirs.workouts.length - 1);
     expect(mergeInto(merged, file)).toEqual(merged); // idempotent
+  });
+
+  it('merge keeps the rotation checkpoint of this device, replace takes the one in the file', () => {
+    expect(mergeInto(mine, fileOf(theirs).data).rotation).toEqual(mine.rotation);
+    expect(replaceWith(mine, fileOf(theirs).data).rotation).toEqual(theirs.rotation);
   });
 
   it('merge takes the profile from the file when this device has none', () => {

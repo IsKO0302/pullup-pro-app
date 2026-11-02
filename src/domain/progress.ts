@@ -2,13 +2,12 @@ import { EXERCISES } from '../data/exercises/catalog';
 import { bestSet, byStart, type History } from './history';
 import { workingMax, type MaxEvidence } from './level';
 import { muscleUpPath } from './paths';
-import { scheduledOn } from './schedule';
+import { scheduleRange } from './rotation';
+import type { ScheduleProfile } from './schedule';
 import { totalsOf } from './stats';
 import { addDays, utcMidnight, weekStart, type LocalDate } from './time';
-import { EXERCISE_IDS, type CompletedWorkout, type ExerciseId, type Profile, type Unit } from './types';
-import { dayStateIn, indexDays, type DayIndex, type DayState } from './week';
-
-type ScheduleProfile = Pick<Profile, 'daysPerWeek' | 'rhythmChanges' | 'startDate'>;
+import { EXERCISE_IDS, type CompletedWorkout, type ExerciseId, type Profile, type RotationState, type Unit } from './types';
+import { cellOf, indexDays, type DayState } from './week';
 
 /* ── Header numbers ─────────────────────────────────────────────────────── */
 
@@ -67,46 +66,70 @@ export interface RhythmWeek {
   start: LocalDate;
   /** Monday → Sunday; 'none' before the program started. */
   days: { date: LocalDate; state: RhythmDayState }[];
-  /** Planned training days (planned rest and optional recovery sessions excluded). */
+  /** Training slots of the week (from the program start). The weekly target counts these only. */
   planned: number;
   /** Days with a real training session (incl. sessions brought forward to a rest day). */
   done: number;
-  /** Planned training days the user chose to rest — part of the plan, never "missed". */
-  recovery: number;
-  /** none = before the start · current = this week · onPlan = done + recovery ≥ planned. */
+  /** Recovery slots of the week. */
+  recoveryPlanned: number;
+  /** Recovery sessions done (shown up to the planned number). */
+  recoveryDone: number;
+  /** Days the user chose to rest — never "missed"; the session moved on. */
+  restChosen: number;
+  /** none = before the start · current = this week · onPlan = training done ≥ planned (D54). */
   status: 'none' | 'current' | 'onPlan' | 'partial';
 }
 
-function rhythmWeek(index: DayIndex, profile: ScheduleProfile, start: LocalDate, today: LocalDate): RhythmWeek {
-  const days: RhythmWeek['days'] = [];
-  let planned = 0;
-  let done = 0;
-  let recovery = 0;
-  for (let i = 0; i < 7; i++) {
-    const date = addDays(start, i);
-    if (date < profile.startDate) {
-      days.push({ date, state: 'none' });
-      continue;
-    }
-    days.push({ date, state: dayStateIn(index, profile, date, today).state });
-    const type = scheduledOn(profile, date);
-    const plannedTraining = type !== null && type !== 'recovery';
-    if (plannedTraining) planned++;
-    if (index.trained.has(date)) done++;
-    else if (plannedTraining && index.recovery.has(date)) recovery++;
+/** Weeks from `firstMonday` to `lastMonday` (inclusive) in one pass over the schedule. */
+function weeksBetween(
+  profile: ScheduleProfile,
+  history: Pick<History, 'workouts' | 'recoveryDays'>,
+  firstMonday: LocalDate,
+  lastMonday: LocalDate,
+  today: LocalDate,
+  checkpoint?: RotationState | null,
+): RhythmWeek[] {
+  if (lastMonday < firstMonday) return [];
+  const index = indexDays(history);
+  const days = scheduleRange(profile, history, firstMonday, addDays(lastMonday, 6), today, checkpoint);
+  const current = weekStart(today);
+  const weeks: RhythmWeek[] = [];
+  for (let w = 0; w * 7 < days.length; w++) {
+    const chunk = days.slice(w * 7, w * 7 + 7);
+    const start = chunk[0]!.date;
+    let planned = 0;
+    let done = 0;
+    let recoveryPlanned = 0;
+    let recoveryDone = 0;
+    let restChosen = 0;
+    const cells = chunk.map((d): RhythmWeek['days'][number] => {
+      if (d.beforeStart) return { date: d.date, state: 'none' };
+      if (d.slot === 'training') planned++;
+      else if (d.slot === 'recovery') recoveryPlanned++;
+      if (index.trained.has(d.date)) done++;
+      if (index.recoverySessions.has(d.date)) recoveryDone++;
+      if (index.recovery.has(d.date)) restChosen++;
+      return { date: d.date, state: cellOf(index, d, today).state };
+    });
+    let status: RhythmWeek['status'];
+    if (planned === 0 && done === 0 && recoveryPlanned === 0) status = 'none';
+    else if (start === current) status = 'current';
+    else status = done >= planned ? 'onPlan' : 'partial';
+    weeks.push({ start, days: cells, planned, done, recoveryPlanned, recoveryDone: Math.min(recoveryDone, recoveryPlanned), restChosen, status });
   }
-  let status: RhythmWeek['status'];
-  if (planned === 0 && done === 0) status = 'none';
-  else if (start === weekStart(today)) status = 'current';
-  else status = done + recovery >= planned ? 'onPlan' : 'partial';
-  return { start, days, planned, done, recovery, status };
+  return weeks;
 }
 
 /** The last `count` weeks, oldest first, the current week last. */
-export function rhythmWeeks(profile: ScheduleProfile, history: Pick<History, 'workouts' | 'recoveryDays'>, today: LocalDate, count = 12): RhythmWeek[] {
-  const index = indexDays(history);
-  const first = addDays(weekStart(today), -7 * (count - 1));
-  return Array.from({ length: count }, (_, i) => rhythmWeek(index, profile, addDays(first, 7 * i), today));
+export function rhythmWeeks(
+  profile: ScheduleProfile,
+  history: Pick<History, 'workouts' | 'recoveryDays'>,
+  today: LocalDate,
+  count = 12,
+  checkpoint?: RotationState | null,
+): RhythmWeek[] {
+  const current = weekStart(today);
+  return weeksBetween(profile, history, addDays(current, -7 * (count - 1)), current, today, checkpoint);
 }
 
 /** Completed weeks on plan / completed weeks with a plan, among `weeks`. */
@@ -203,14 +226,11 @@ export function milestones(profile: ScheduleProfile & Pick<Profile, 'equipment'>
   });
 
   // 4 complete weeks in a row on plan, each with at least one real session.
-  const index = indexDays(history);
-  const current = weekStart(today);
   let run = 0;
-  for (let start = weekStart(profile.startDate); start < current; start = addDays(start, 7)) {
-    const wk = rhythmWeek(index, profile, start, today);
+  for (const wk of weeksBetween(profile, history, weekStart(profile.startDate), addDays(weekStart(today), -7), today)) {
     run = wk.status === 'onPlan' && wk.done > 0 ? run + 1 : 0;
     if (run === 4) {
-      hit('rhythm4', addDays(start, 6));
+      hit('rhythm4', addDays(wk.start, 6));
       break;
     }
   }

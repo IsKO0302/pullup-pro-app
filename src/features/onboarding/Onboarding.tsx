@@ -7,6 +7,7 @@ import { useStore } from '../../app/store';
 import { makeStamp } from '../../domain/time';
 import { DAYS_PER_WEEK, EQUIPMENT, SESSION_MINUTES, type Equipment, type Profile, type SessionMinutes } from '../../domain/types';
 import { Button, Chip, ChoiceGroup, IconButton, Stepper, cx } from '../../ui';
+import { RhythmSplit } from '../common/RhythmSplit';
 import { WelcomeScreen } from './WelcomeScreen';
 import './onboarding.css';
 
@@ -108,7 +109,7 @@ function SetupMax({ go }: { go: Go }) {
   );
 }
 
-const EXTRAS: readonly Equipment[] = ['dipBars', 'bands', 'rings'];
+const EXTRAS: readonly Equipment[] = ['dipBars', 'bands', 'rings', 'box'];
 
 function SetupEquipment({ profile, go }: { profile: Profile; go: Go }) {
   const { t } = useI18n();
@@ -164,6 +165,7 @@ function SetupRhythm({ profile, go }: { profile: Profile; go: Go }) {
       <div className="setup__group setup__days">
         <p className="setup__label">{t('setup.rhythm.days')}</p>
         <ChoiceGroup label={t('setup.rhythm.days')} grid value={days} onChange={setDays} options={DAYS_PER_WEEK.map((n) => ({ value: n, label: String(n) }))} />
+        <RhythmSplit days={days} className="setup__split" />
       </div>
       <div className="setup__group setup__minutes">
         <p className="setup__label">{t('setup.rhythm.length')}</p>

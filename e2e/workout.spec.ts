@@ -4,6 +4,7 @@ import { dict, onboard, runToCompletion } from './helpers';
 const d = dict.en;
 // 4 days a week (default): Mon pull strength, Tue push, Wed rest, Thu pull volume, Fri legs + core.
 const MONDAY = new Date('2026-01-12T10:00:00');
+const TUESDAY = new Date('2026-01-13T10:00:00');
 const WEDNESDAY = new Date('2026-01-14T10:00:00');
 
 const today = (page: Page) => page.locator('.week__day.is-today');
@@ -113,11 +114,12 @@ test('"Feeling off" makes the plan lighter before the first set and can be undon
   await expect(sets).toHaveText(before ?? '');
 });
 
-test('rest today instead → recovery day (on plan); undo brings the workout back', async ({ page }) => {
+test('rest today instead: the workout waits for the next training day; undo brings it back', async ({ page }) => {
   await page.clock.install({ time: MONDAY });
   await onboard(page, 'en');
   await page.getByRole('button', { name: d['today.restInstead'] }).click();
   await expect(page.getByRole('dialog', { name: d['today.restTitle'] })).toBeVisible();
+  await expect(page.getByText(d['today.restText'])).toBeVisible();
   await page.getByRole('button', { name: d['reason.tired'] }).click();
   await page.getByRole('button', { name: d['today.restConfirm'], exact: true }).click();
 
@@ -125,12 +127,31 @@ test('rest today instead → recovery day (on plan); undo brings the workout bac
   await expect(page.getByText(d['reason.tired'])).toBeVisible();
   await expect(today(page)).toHaveAttribute('data-state', 'recovery');
   await expect(page.getByRole('button', { name: d['today.lightMobility'] })).toBeVisible();
+  // Monday's PULL · STRENGTH is not lost: Tuesday (a training day) gets it.
+  await expect(page.getByTestId('next-session')).toHaveText('Tomorrow: Pull · Strength');
 
   await page.reload();
   await expect(page.getByRole('heading', { name: d['today.recoveryTitle'] })).toBeVisible();
+  await expect(page.getByTestId('next-session')).toHaveText('Tomorrow: Pull · Strength');
   await page.getByRole('button', { name: d['today.recoveryUndo'] }).click();
   await expect(page.getByTestId('start')).toBeVisible();
   await expect(today(page)).toHaveAttribute('data-state', 'today');
+  await expect(page.getByRole('heading', { name: d['type.pullStrength'].toUpperCase() })).toBeVisible();
+});
+
+test('a chosen rest day keeps the pending session: the next training day starts with it', async ({ page }) => {
+  await page.clock.install({ time: MONDAY });
+  await onboard(page, 'en');
+  await page.getByRole('button', { name: d['today.restInstead'] }).click();
+  await page.getByRole('button', { name: d['today.restConfirm'], exact: true }).click();
+  await expect(page.getByRole('heading', { name: d['today.recoveryTitle'] })).toBeVisible();
+
+  await page.clock.setSystemTime(TUESDAY);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: d['type.pullStrength'].toUpperCase() })).toBeVisible();
+  await expect(page.getByTestId('start')).toBeVisible();
+  // Monday stays a chosen rest day in the week strip, not a missed one.
+  await expect(page.locator('.week__day').first()).toHaveAttribute('data-state', 'recovery');
 });
 
 test('planned rest day: light mobility first, "train anyway" starts the next workout early', async ({ page }) => {

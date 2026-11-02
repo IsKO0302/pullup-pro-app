@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WEEK1, history, makeProfile, maxEntry } from '../test/fixtures';
-import { lastSlotLog, planDay } from './plan';
+import { buildSession, lastSlotLog, planDay } from './plan';
 import {
   adjustRest, completeSet, currentExercise, doneSetCount, elapsedSec, endRest, finishSession, hasStarted, holdElapsedSec,
   isFinished, pause, progressOf, replacePlan, restLeftSec, resume, skipSet, startHold, startSession, stopHold, swapExercise,
@@ -98,7 +98,7 @@ describe('workout session', () => {
   });
 
   it('times holds from absolute instants, paused time excluded', () => {
-    const push = planDay(profile, h, '2026-01-13');
+    const push = buildSession(profile, h, '2026-01-13', 'push');
     let s = startSession(push, { id: 's2', variant: 'planned', now: time(0), timeZone: null, localDate: '2026-01-13' });
     while (currentExercise(s)!.unit !== 'seconds') {
       s = endRest(completeSet(s, currentExercise(s)!.target, time(1)));
@@ -156,20 +156,40 @@ describe('workout session', () => {
   });
 
   it('swaps an exercise before its first set, and back again', () => {
+    // With a box, strict pull-ups can be swapped for feet-assisted pull-ups or negatives.
+    const boxProfile = makeProfile({ equipment: ['bar', 'box'] });
     const s = fresh();
-    const options = swapOptions(s, profile.equipment);
+    expect(swapOptions(s, profile.equipment)).toEqual([]);
+    const options = swapOptions(s, boxProfile.equipment);
     expect(options.length).toBeGreaterThan(0);
     expect(options.length).toBeLessThanOrEqual(2);
     expect(options).not.toContain(s.log[0]!.exerciseId);
     const swapped = swapExercise(s, options[0]!);
     expect(swapped.log[0]).toMatchObject({ exerciseId: options[0], swappedFrom: plan.exercises[0]!.exerciseId, sets: [] });
-    expect(swapOptions(swapped, profile.equipment)[0]).toBe(plan.exercises[0]!.exerciseId);
+    expect(swapOptions(swapped, boxProfile.equipment)[0]).toBe(plan.exercises[0]!.exerciseId);
     const back = swapExercise(swapped, plan.exercises[0]!.exerciseId);
     expect(back.log[0]).toEqual(s.log[0]);
     // Not once a set of it is logged.
     const started = completeSet(s, 3, time(5));
-    expect(swapOptions(endRest(started), profile.equipment)).toEqual([]);
+    expect(swapOptions(endRest(started), boxProfile.equipment)).toEqual([]);
     expect(swapExercise(endRest(started), options[0]!)).toEqual(endRest(started));
+  });
+
+  it('strict swaps keep the planned (reserve-safe) target; beginners are not offered negatives', () => {
+    const l3 = history({ maxEntries: [maxEntry(3)] });
+    const strength = buildSession(profile, l3, WEEK1, 'pullStrength');
+    expect(strength.exercises[0]).toMatchObject({ exerciseId: 'strict-pullup', target: 1 });
+    const start = (w: typeof strength) => startSession(w, { id: 's3', variant: 'planned', now: time(0), timeZone: 'UTC', localDate: WEEK1 });
+    const asChin = swapExercise({ ...start(strength), log: start(strength).log.filter((e) => e.exerciseId !== 'chin-up') }, 'chin-up');
+    expect(asChin.log[0]).toMatchObject({ exerciseId: 'chin-up', target: 1 });
+
+    const everything = makeProfile({ equipment: ['bar', 'bands', 'box'] });
+    const beginner = buildSession(everything, history(), WEEK1, 'pullStrength');
+    expect(beginner.level).toBe(0);
+    const s = start(beginner);
+    for (let i = 0; i < s.log.length; i++) {
+      for (const id of swapOptions({ ...s, exIndex: i }, everything.equipment)) expect(id, `slot ${i}`).not.toBe('negative-pullup');
+    }
   });
 
   it('never offers an exercise that needs missing equipment or is already in the session', () => {

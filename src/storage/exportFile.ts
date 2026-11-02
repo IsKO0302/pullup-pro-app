@@ -65,6 +65,7 @@ export function buildExport(data: AppData, stamp: EventStamp, appVersion: string
       recent: data.recent,
       thoughtDays: data.thoughtDays,
       active: data.active,
+      rotation: data.rotation,
       meta: { lastExportAtUtc: stamp.atUtc, reminderDismissedAtUtc },
     },
   };

@@ -37,6 +37,13 @@ export const MIGRATIONS: readonly Migration[] = [
       };
     },
   },
+  {
+    version: 3,
+    description: 'kv "rotation": weekly rotation checkpoint (derived from the history when absent, so nothing to backfill).',
+    upgrade() {
+      // No store changes: the checkpoint lives in kv and is written on the next start.
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]!.version;

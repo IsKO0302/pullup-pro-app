@@ -135,7 +135,7 @@ describe('storage', () => {
     expect(data.workouts.map((w) => w.id)).toEqual(['keep']);
   });
 
-  it('migrates v1 → v2 and preserves every existing record', async () => {
+  it('migrates v1 → v3 and preserves every existing record', async () => {
     const name = `test-${crypto.randomUUID()}`;
     const v1 = await openDb(name, MIGRATIONS.slice(0, 1), 1);
     const legacy = workout('old');
@@ -149,14 +149,27 @@ describe('storage', () => {
 
     const v2 = await openDb(name);
     opened.push({ name, db: v2 });
-    expect(v2.version).toBe(2);
+    expect(v2.version).toBe(MIGRATIONS.length);
     const data = await loadAll(v2);
     expect(data.profile).toEqual(profile);
+    expect(data.rotation).toBeNull(); // derived from the history on the next start
     expect(data.recoveryDays).toHaveLength(1);
     expect(data.workouts).toHaveLength(1);
     expect(data.workouts[0]).toEqual({ ...legacy, timeZone: null });
     await putThoughtDay(v2, { localDate: '2025-03-06', thoughtId: 'hope-02', atUtc: '2025-03-06T07:00:00.000Z' });
     expect((await loadAll(v2)).thoughtDays).toHaveLength(1);
+  });
+
+  it('keeps the rotation checkpoint in kv; a replace without one clears the old one', async () => {
+    const { db } = await freshDb();
+    const rotation = {
+      rules: 2, asOf: '2026-01-14', startDate: '2026-01-05', weekStart: '2026-01-12', activeDaysPerWeek: 4, plannedTrainingSessionsPerWeek: 4,
+      scheduleCursor: 2, rotationDays: 4, trainingRotationIndex: 2, completedTrainingSessions: 2, completedRecoverySessions: 0, digest: 'abc',
+    } as const;
+    await putKv(db, 'rotation', rotation);
+    expect((await loadAll(db)).rotation).toEqual(rotation);
+    await replaceAll(db, { ...emptyAppData(), profile });
+    expect((await loadAll(db)).rotation).toBeNull();
   });
 
   it('migrations are strictly increasing and documented', () => {

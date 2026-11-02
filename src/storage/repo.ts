@@ -1,11 +1,11 @@
 import {
   DEFAULT_META, DEFAULT_SETTINGS, emptyAppData,
   type ActiveSession, type AppData, type CompletedWorkout, type MaxEntry, type Meta, type Profile,
-  type RecentThought, type RecoveryDay, type Settings, type ThoughtDay,
+  type RecentThought, type RecoveryDay, type RotationState, type Settings, type ThoughtDay,
 } from '../domain/types';
 import { collect, runTx, SCHEMA_VERSION, StorageError, type StoreName } from './db';
 
-export type KvKey = 'profile' | 'settings' | 'meta' | 'active' | 'favorites' | 'recent' | 'maxEntries';
+export type KvKey = 'profile' | 'settings' | 'meta' | 'active' | 'favorites' | 'recent' | 'maxEntries' | 'rotation';
 export interface KvValues {
   profile: Profile;
   settings: Settings;
@@ -14,6 +14,7 @@ export interface KvValues {
   favorites: string[];
   recent: RecentThought[];
   maxEntries: MaxEntry[];
+  rotation: RotationState;
 }
 
 export const DATA_STORES: StoreName[] = ['kv', 'workouts', 'recoveryDays', 'thoughtDays'];
@@ -32,6 +33,7 @@ function toAppData(keys: IDBValidKey[], values: unknown[], workouts: unknown[], 
   data.favorites = (kv.get('favorites') as string[] | undefined) ?? [];
   data.recent = (kv.get('recent') as RecentThought[] | undefined) ?? [];
   data.maxEntries = (kv.get('maxEntries') as MaxEntry[] | undefined) ?? [];
+  data.rotation = (kv.get('rotation') as RotationState | undefined) ?? null;
   data.workouts = sortWorkouts(workouts as CompletedWorkout[]);
   data.recoveryDays = (recovery as RecoveryDay[]).sort((a, b) => a.localDate.localeCompare(b.localDate));
   data.thoughtDays = (thoughts as ThoughtDay[]).sort((a, b) => a.localDate.localeCompare(b.localDate));
@@ -66,6 +68,7 @@ function writeAll(tx: IDBTransaction, stores: StoreName[], data: AppData) {
   kv.put(data.favorites, 'favorites');
   kv.put(data.recent, 'recent');
   kv.put(data.maxEntries, 'maxEntries');
+  if (data.rotation) kv.put(data.rotation, 'rotation');
   const workouts = tx.objectStore('workouts');
   for (const w of data.workouts) workouts.put(w);
   const recovery = tx.objectStore('recoveryDays');

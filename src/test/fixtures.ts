@@ -5,7 +5,7 @@
 import { EXERCISES } from '../data/exercises/catalog';
 import type { History } from '../domain/history';
 import { planDay, type PlanOptions } from '../domain/plan';
-import { scheduledType } from '../domain/schedule';
+import { scheduleOn } from '../domain/rotation';
 import { addDays, type LocalDate } from '../domain/time';
 import type {
   CompletedWorkout, ExerciseId, ExerciseRole, LoggedExercise, MaxEntry, PlannedExercise, Profile, RecoveryDay, RecoveryReason, Workout,
@@ -94,13 +94,14 @@ export function complete(plan: Workout, perform: Perform = asPlanned, hour = 18)
 
 /**
  * Follows the planned rotation for `days` days from `from`, doing every set as
- * `perform` says. With `takeTests`, a suggested max test is taken.
+ * `perform` says (training and recovery days; rest days stay rest). With
+ * `takeTests`, a suggested max test is taken.
  */
 export function simulate(profile: Profile, h: History, from: LocalDate, days: number, perform: Perform = asPlanned, opts: PlanOptions & { takeTests?: boolean } = {}): History {
   let current = h;
   for (let i = 0; i < days; i++) {
     const date = addDays(from, i);
-    if (!scheduledType(profile.daysPerWeek, date)) continue;
+    if (!scheduleOn(profile, current, date).type) continue;
     let plan = planDay(profile, current, date, opts);
     if (opts.takeTests && plan.flags.maxTestSuggested) plan = planDay(profile, current, date, { ...opts, variant: 'maxTest' });
     current = { ...current, workouts: [...current.workouts, complete(plan, perform)] };

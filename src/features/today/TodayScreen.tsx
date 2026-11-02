@@ -1,13 +1,14 @@
 import { CircleAlert, Info } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { currentTimeZone, useToday } from '../../app/clock';
-import { useHistory } from '../../app/history';
+import { useHistory, useRotation } from '../../app/history';
 import { useI18n } from '../../app/i18n';
 import { navigate } from '../../app/router';
 import { useStore } from '../../app/store';
 import { isTraining } from '../../domain/history';
-import { planDay } from '../../domain/plan';
-import { nextScheduled, scheduledType } from '../../domain/schedule';
+import type { History } from '../../domain/history';
+import { buildSession, planDay } from '../../domain/plan';
+import { scheduleRange, type DaySchedule } from '../../domain/rotation';
 import { totalsOf } from '../../domain/stats';
 import { addDays, makeStamp } from '../../domain/time';
 import type { Profile, Workout } from '../../domain/types';
@@ -41,21 +42,30 @@ export function TodayScreen() {
   return <Today profile={profile} />;
 }
 
+/** The session a scheduled day will really be (no-bar and 48-hour rules applied). */
+function sessionOf(profile: Profile, history: History, day: DaySchedule | undefined): Workout | null {
+  return day?.type ? buildSession(profile, history, day.date, day.type) : null;
+}
+
 function Today({ profile }: { profile: Profile }) {
   const { t, tp, date, upper } = useI18n();
   const { data, actions } = useStore();
   const history = useHistory();
+  const rotation = useRotation();
   const today = useToday();
   const start = useStartWorkout();
   const text = useExerciseText();
   const [restOpen, setRestOpen] = useState(false);
 
-  const plan = useMemo(() => planDay(profile, history, today), [profile, history, today]);
-  const strip = useMemo(() => weekStrip(profile, history, today), [profile, history, today]);
+  const plan = useMemo(() => planDay(profile, history, today, { rotation }), [profile, history, today, rotation]);
+  // Today plus the next 7 days: real history so far, the plan assumed from here on.
+  const days = useMemo(() => scheduleRange(profile, history, today, addDays(today, 7), today, rotation), [profile, history, today, rotation]);
+  const strip = useMemo(() => weekStrip(profile, history, today, rotation), [profile, history, today, rotation]);
+  const day = days[0]!;
   const active = data.active;
   const trained = trainedOn(history, today);
   const recovery = data.recoveryDays.find((r) => r.localDate === today) ?? null;
-  const restDay = scheduledType(profile.daysPerWeek, today) === null;
+  const restDay = day.kind === 'rest';
 
   const greeting = t(greetingKey(new Date().getHours()));
   const top = (
@@ -65,7 +75,7 @@ function Today({ profile }: { profile: Profile }) {
   );
 
   const go = (variant: 'planned' | 'short' | 'light' | 'maxTest' | 'early') => () => {
-    const w = variant === 'planned' ? plan : planDay(profile, history, today, { variant });
+    const w = variant === 'planned' ? plan : planDay(profile, history, today, { variant, rotation });
     void start(w, variant);
   };
 
@@ -84,8 +94,7 @@ function Today({ profile }: { profile: Profile }) {
     const sets = totals.reduce((n, x) => n + x.setsDone, 0);
     const reps = totals.reduce((n, x) => n + x.reps, 0);
     const minutes = Math.max(1, Math.round(done.reduce((n, w) => n + w.durationSec, 0) / 60));
-    const tomorrow = addDays(today, 1);
-    const next = scheduledType(profile.daysPerWeek, tomorrow) ? planDay(profile, history, tomorrow) : null;
+    const next = sessionOf(profile, history, days[1]);
     card = (
       <section className="card today__card today__card--done" aria-labelledby="today-title">
         <p className="t-eyebrow">{t('today.doneTitle')}</p>
@@ -99,11 +108,21 @@ function Today({ profile }: { profile: Profile }) {
       : <Button variant="secondary" size="xl" block onClick={go('light')}>{t('today.trainMore')}</Button>;
     if (!active) secondary = <p className="t-caption muted today__hint">{t('today.trainMoreHint')}</p>;
   } else if (recovery) {
+    // The session that was due today waits for the next training day.
+    const nextDay = days.slice(1).find((d) => d.kind === 'training');
+    const next = sessionOf(profile, history, nextDay);
     card = (
       <section className="card today__card" aria-labelledby="today-title">
         <p className="t-eyebrow">{t('today.label')}</p>
         <h1 id="today-title" className="t-h2 today__title">{t('today.recoveryTitle')}</h1>
         <p className="muted">{t('today.recoveryText')}</p>
+        {nextDay && next && (
+          <p className="muted" data-testid="next-session">
+            {nextDay.date === addDays(today, 1)
+              ? t('today.tomorrow', { name: typeLabel(t, next) })
+              : t('today.nextOn', { name: typeLabel(t, next), day: date(nextDay.date, { weekday: 'long' }) })}
+          </p>
+        )}
         {recovery.reason && <p className="today__tag">{t(`reason.${recovery.reason}`)}</p>}
       </section>
     );
@@ -114,18 +133,18 @@ function Today({ profile }: { profile: Profile }) {
       </div>
     );
   } else if (restDay) {
-    const next = nextScheduled(profile.daysPerWeek, today);
+    const early = planDay(profile, history, today, { variant: 'early', rotation });
     card = (
       <section className="card today__card" aria-labelledby="today-title">
         <p className="t-eyebrow">{t('today.label')}</p>
         <h1 id="today-title" className="t-h2 today__title">{t('today.restPlannedTitle')}</h1>
-        <p className="muted">{t('today.restPlannedText')}</p>
+        <p className="muted">{t(day.weekDone ? 'today.weekDoneText' : 'today.restPlannedText')}</p>
       </section>
     );
     primary = <Button variant="secondary" size="xl" block onClick={go('light')}>{t('today.lightMobility')}</Button>;
-    secondary = next && (
+    secondary = (
       <div className="today__links">
-        <Button variant="link" onClick={go('early')}>{t('today.trainAnyway', { name: typeLabel(t, { type: next.type }) })}</Button>
+        <Button variant="link" onClick={() => void start(early, 'early')}>{t('today.trainAnyway', { name: typeLabel(t, early) })}</Button>
       </div>
     );
   } else {
@@ -133,9 +152,10 @@ function Today({ profile }: { profile: Profile }) {
     primary = active
       ? <Button variant="primary" size="xl" block onClick={() => navigate('workout')}>{t('today.continueAction')}</Button>
       : <Button variant="primary" size="xl" block glow onClick={go('planned')} data-testid="start">{t('today.start')}</Button>;
+    // A recovery day is already the light day: no "short version" of it.
     secondary = !active && (
       <div className="today__links">
-        <Button variant="link" onClick={go('short')}>{t('today.short')}</Button>
+        {day.kind === 'training' && <Button variant="link" onClick={go('short')}>{t('today.short')}</Button>}
         <Button variant="link" onClick={() => setRestOpen(true)}>{t('today.restInstead')}</Button>
       </div>
     );

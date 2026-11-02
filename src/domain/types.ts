@@ -3,8 +3,9 @@ import type { EventStamp, LocalDate } from './time';
 export type Lang = 'en' | 'ru' | 'tr';
 export const LANGS: readonly Lang[] = ['en', 'ru', 'tr'];
 
-export type Equipment = 'bar' | 'dipBars' | 'bands' | 'rings';
-export const EQUIPMENT: readonly Equipment[] = ['bar', 'dipBars', 'bands', 'rings'];
+/** box = a stable box, step or chair: safe access to the top of the bar (negatives, feet-assisted work). */
+export type Equipment = 'bar' | 'dipBars' | 'bands' | 'rings' | 'box';
+export const EQUIPMENT: readonly Equipment[] = ['bar', 'dipBars', 'bands', 'rings', 'box'];
 
 export type SessionMinutes = 10 | 20 | 30 | 45;
 export const SESSION_MINUTES: readonly SessionMinutes[] = [10, 20, 30, 45];
@@ -28,7 +29,7 @@ export const MUSCLES: readonly Muscle[] = [
 export const EXERCISE_IDS = [
   // pull
   'dead-hang', 'scapular-pull', 'negative-pullup', 'band-pullup', 'australian-row', 'strict-pullup',
-  'chin-up', 'wide-pullup', 'archer-pullup', 'weighted-pullup', 'high-pullup',
+  'chin-up', 'wide-pullup', 'archer-pullup', 'weighted-pullup', 'high-pullup', 'supported-hang', 'feet-assisted-pullup',
   // push / shoulders
   'wall-pushup', 'incline-pushup', 'pushup', 'diamond-pushup', 'pike-pushup', 'parallel-dips',
   'bench-dips', 'dip-support-hold', 'handstand-wall-hold',
@@ -230,6 +231,37 @@ export interface Meta {
   reminderDismissedAtUtc: string | null;
 }
 
+/**
+ * Weekly rotation state (DECISIONS D55–D57): where the schedule stands at the
+ * START of `asOf`. Derived from the history by a pure fold; the stored copy is a
+ * checkpoint that is only trusted while `digest` still matches the history.
+ */
+export interface RotationState {
+  /** Version of the rotation rules that produced this state. */
+  rules: number;
+  /** The state describes the start of this local date (every earlier day is closed). */
+  asOf: LocalDate;
+  startDate: LocalDate;
+  /** Monday of the week the weekly counters belong to. */
+  weekStart: LocalDate;
+  /** Active days this week (training + recovery), the user's setting. */
+  activeDaysPerWeek: number;
+  /** Training slots this week (on or after the start date). Weekly targets count these only. */
+  plannedTrainingSessionsPerWeek: number;
+  /** Active slots of this week already passed. */
+  scheduleCursor: number;
+  /** Days-per-week setting the rotation index refers to. */
+  rotationDays: number;
+  /** Next training session type, as an index into the rotation for `rotationDays`. */
+  trainingRotationIndex: number;
+  /** Days this week with a real training session. */
+  completedTrainingSessions: number;
+  /** Days this week with a recovery session. */
+  completedRecoverySessions: number;
+  /** Fingerprint of the facts the state was folded from. */
+  digest: string;
+}
+
 export const DEFAULT_SETTINGS: Settings = { sound: false, vibration: true };
 export const DEFAULT_META: Meta = { persist: null, lastExportAtUtc: null, reminderDismissedAtUtc: null };
 
@@ -244,6 +276,8 @@ export interface AppData {
   workouts: CompletedWorkout[];
   recoveryDays: RecoveryDay[];
   thoughtDays: ThoughtDay[];
+  /** Rotation checkpoint (null = derive from the history). */
+  rotation: RotationState | null;
 }
 
 export function emptyAppData(): AppData {
@@ -258,5 +292,6 @@ export function emptyAppData(): AppData {
     workouts: [],
     recoveryDays: [],
     thoughtDays: [],
+    rotation: null,
   };
 }

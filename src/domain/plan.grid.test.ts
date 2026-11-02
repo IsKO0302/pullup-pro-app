@@ -1,20 +1,23 @@
 /**
  * Property tests over the whole configuration grid: days/week 2–7 × session
- * length × level 0–4 × equipment × every weekday × variants.
+ * length × level 0–4 × equipment × every session of the week's template × variants.
+ * Sessions are built directly (buildSession) so every type is covered; the weekly
+ * rotation itself is tested in rotation.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { EXERCISES, hasEquipment } from '../data/exercises/catalog';
 import { WEEK1, history, makeProfile, maxEntry } from '../test/fixtures';
 import { estimateMinutes, estimateSeconds } from './duration';
-import { planDay, type Variant } from './plan';
-import { scheduledType } from './schedule';
+import { buildSession, type Variant } from './plan';
+import { planTemplate } from './schedule';
 import { addDays } from './time';
 import { DAYS_PER_WEEK, SESSION_MINUTES, type Equipment, type Workout } from './types';
 
 const LEVEL_MAX = [0, 2, 5, 10, 15] as const;
 const EQUIPMENT_SETS: Record<string, Equipment[]> = {
   bar: ['bar'],
-  full: ['bar', 'dipBars', 'bands', 'rings'],
+  full: ['bar', 'dipBars', 'bands', 'rings', 'box'],
+  barBox: ['bar', 'box'],
   rings: ['rings'],
   none: [],
   dipsOnly: ['dipBars'],
@@ -56,17 +59,17 @@ describe('planDay — configuration grid', () => {
             for (let d = 0; d < 7; d++) {
               const date = addDays(WEEK1, d);
               const label = `${eqName} L${level} ${date}`;
-              const scheduled = scheduledType(days, date);
-              const planned = planDay(profile, h, date);
+              const scheduled = planTemplate(days)[d] ?? null;
+              const planned = buildSession(profile, h, date, scheduled ?? 'light');
               expect(planned.level).toBe(level);
               const plannedMinutes = scheduled === 'recovery' ? Math.min(20, Math.max(10, minutes)) : scheduled === null ? 10 : minutes;
               failures.push(...problems(planned, owned, plannedMinutes, label));
               if (scheduled === null && planned.type !== 'light') failures.push(`${label} rest day is not light`);
               if (scheduled !== null && owned.some((e) => e === 'bar' || e === 'rings') && planned.type !== scheduled) failures.push(`${label} type ${planned.type} ≠ ${scheduled}`);
               for (const variant of ['short', 'light'] as Variant[]) {
-                failures.push(...problems(planDay(profile, h, date, { variant }), owned, 10, `${label} ${variant}`));
+                failures.push(...problems(buildSession(profile, h, date, variant as 'short' | 'light', { variant }), owned, 10, `${label} ${variant}`));
               }
-              expect(planDay(profile, h, date)).toEqual(planned);
+              expect(buildSession(profile, h, date, scheduled ?? 'light')).toEqual(planned);
             }
           }
         }
