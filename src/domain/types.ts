@@ -75,6 +75,8 @@ export type ExerciseRole = 'main' | 'secondary' | 'accessory' | 'warmup' | 'test
 
 export interface PlannedExercise {
   exerciseId: ExerciseId;
+  /** Stable progression key, e.g. "pullStrength.main" (double progression is tracked per slot). */
+  slot: string;
   sets: number;
   /** Reps or seconds per set (for test sets: the current max, as a reference only). */
   target: number;
@@ -110,6 +112,7 @@ export interface LoggedSet {
 
 export interface LoggedExercise {
   exerciseId: ExerciseId;
+  slot: string;
   unit: Unit;
   role: ExerciseRole;
   target: number;

@@ -52,3 +52,24 @@ Every action is queued; the in-memory state changes only after the transaction c
 
 ### D14 · First-launch steps are persisted in `profile.onboarding`
 Closing the app in the middle of the setup resumes on the same step. "Skip" keeps whatever is stored (the defaults unless the user went back); a skipped pull-up question stores no max entry, which the engine treats as level 0 (the most conservative start).
+
+### D15 · Exercise cues are general guidance — to be reviewed by the owner
+44 exercises × 3 languages (name, 3 cues, one common mistake, safety notes on optional and demanding exercises) were written from general calisthenics coaching knowledge, not by a certified coach or physiotherapist. The app labels them as general guidance (no medical claims). The owner should review them before a public release; they are listed in CONTENT-REVIEW.md.
+
+### D16 · Pull-up max = `strict-pullup` only; pull-up totals = strict, unassisted variations
+The working max comes only from strict, unassisted pull-ups: setup answer, self-update, max tests and normal strict sets (guardrail 6). An honest lower self-report or test resets it. Chin-ups, wide/archer/weighted/high pull-ups (`family: 'pullup'`) count toward "pull-ups done" totals; band-assisted reps, negatives and muscle-ups are separate records and never touch the max.
+
+### D17 · Fixed Monday-first weekly templates (no weekday picking in v1)
+One template per 2–7 days/week (tested: right count, exactly one strength day, pull days never back to back, ≥ 1 recovery day at 6–7). Rejected for v1: choosing weekdays — one more setup step and more edge cases; parked in IDEAS.md.
+
+### D18 · Strict-pull-up targets stay at least 2 reps below the working max
+Max-based slots start at a fraction of the max (60 % strength, 50 % volume) and double progression may raise them only up to `max − 2` (2–3 reps in reserve, guardrail 4). Above that, progress comes from the max test (suggested every 4 weeks, never forced), an honest self-update or logging more reps than planned.
+
+### D19 · Duration fitting is a deterministic greedy fill, verified over the whole grid
+Main block first, further exercises join in priority order with ≥ 2 sets, then sets grow toward the design and the maximum, and finally rest times are nudged within 0.6–1.5×. A property test covers 6 rhythms × 4 lengths × 5 levels × 5 equipment sets × 7 weekdays × 3 variants: every normal session lands within ±15 % of the chosen length, recovery days 10–20 min, short/light ≈ 10 min.
+
+### D20 · Reductions: lighter week 60 % of sets, return after a break 70 % → 85 %, "feeling off" 70 %, floor 40 %
+Return after 7+ days without real training (light/recovery extras do not count) also lowers targets by 10 % — no guilt, no catch-up. "Feeling off" lowers targets by 10 %. Reduced sessions never drive progression, and progression is held the day after a tired / pain / ill recovery day ("busy" does not hold it). No max test is suggested after recent pain, illness, tiredness, a break, or within 3 weeks of the last test.
+
+### D21 · Without a bar or rings: strength days → legs/core, volume days → push
+So the two still alternate in every template; the plan carries a `noPullEquipment` flag that TODAY explains. "Short version" stays a 10-minute session built on the push main exercise.

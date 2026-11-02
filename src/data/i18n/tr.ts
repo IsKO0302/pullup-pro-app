@@ -264,7 +264,7 @@ export const tr: Dictionary = {
   'path.current': 'Şu anki aşama: {name}',
   'path.disclaimer': 'Bunlar yaygın antrenörlük ölçütleri, garanti değil.',
   'path.pullup.1': 'Asılma',
-  'path.pullup.2': 'Kürek çekişi',
+  'path.pullup.2': 'Skapula çekişi',
   'path.pullup.3': 'Negatifler',
   'path.pullup.4': 'Yardımlı',
   'path.pullup.5': 'Tam',

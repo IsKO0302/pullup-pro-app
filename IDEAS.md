@@ -15,3 +15,5 @@ Out of scope by the master specification (do not build without a new decision):
 - More than two poster styles; poster formats 1:1 and 16:9.
 
 Ideas that came up while building (parked):
+- Pick training weekdays instead of the fixed Monday-first templates (D17).
+- Optional "deload now" button when life gets busy (today: Rest today / Make it lighter cover it).
