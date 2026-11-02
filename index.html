@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#08090B" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="PULLUP PRO — you vs. you." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>PULLUP PRO</title>
+    <script>
+      // Apply the saved language before first paint (no flash of the wrong language).
+      try {
+        var l = localStorage.getItem('pullup-pro:lang');
+        if (l === 'en' || l === 'ru' || l === 'tr') document.documentElement.lang = l;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>PULLUP PRO needs JavaScript.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

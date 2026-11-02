@@ -1,0 +1,10 @@
+:root {
+  --bg: #08090b;
+  --surface-1: #101216;
+  --surface-2: #171a20;
+  --text: #f1f2f3;
+  --text-2: #a2a7ae;
+  --silver: #c5cdd7;
+  color-scheme: dark;
+}
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; }
