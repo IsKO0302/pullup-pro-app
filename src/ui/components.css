@@ -65,7 +65,8 @@
 }
 .stepper__btn:active:not([disabled]) { transform: scale(0.94); }
 .stepper__btn[disabled] { opacity: 0.35; cursor: not-allowed; }
-.stepper__value { text-align: center; font-size: 6rem; line-height: 6rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.stepper > div { text-align: center; min-width: 0; }
+.stepper__value { display: block; text-align: center; font-size: 6rem; line-height: 6rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .stepper__unit { display: block; font-size: 0.8125rem; line-height: 1.125rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-2); font-weight: 500; }
 .stepper--md .stepper__btn { width: 56px; height: 56px; }
 .stepper--md .stepper__value { font-size: 3rem; line-height: 3.25rem; }
