@@ -16,6 +16,7 @@ import { Banner, Button } from '../../ui';
 import { muscleList, typeDescription, typeLabel, useExerciseText } from '../common/labels';
 import { useStartWorkout } from '../workout/start';
 import { RestSheet } from './RestSheet';
+import { ThoughtOfDay } from './ThoughtOfDay';
 import { WeekStrip } from './WeekStrip';
 import './today.css';
 
@@ -158,6 +159,7 @@ function Today({ profile }: { profile: Profile }) {
         ) : secondary}
       </div>
       <WeekStrip cells={strip} />
+      <ThoughtOfDay />
       <RestSheet open={restOpen} onClose={() => setRestOpen(false)} onConfirm={(r) => void markRest(r)} />
     </div>
   );

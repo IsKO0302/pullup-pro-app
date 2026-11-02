@@ -14,6 +14,7 @@ import { useStore } from './store';
 
 // Charts and history are code-split: TODAY and the workout stay in the first bundle.
 const ProgressPage = lazy(() => import('../features/progress/ProgressPage'));
+const ThoughtsPage = lazy(() => import('../features/thoughts/ThoughtsPage'));
 
 const TABS = ['today', 'progress', 'thoughts', 'you'] as const;
 type Tab = (typeof TABS)[number];
@@ -58,7 +59,11 @@ export function Shell({ route }: { route: string[] }) {
       );
       break;
     case 'thoughts':
-      screen = <div className="screen-pad"><h1 className="t-h1">{t(`nav.${tab}`)}</h1></div>;
+      screen = (
+        <Suspense fallback={<div className="screen-pad"><Skeleton height={32} width="50%" /></div>}>
+          <ThoughtsPage id={route[1]} />
+        </Suspense>
+      );
       break;
     default:
       screen = <TodayScreen />;

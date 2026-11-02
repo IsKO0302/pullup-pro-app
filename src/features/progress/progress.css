@@ -82,7 +82,6 @@
 .journal__note { font-size: 1.25rem; line-height: 1.6rem; color: var(--text); overflow-wrap: anywhere; }
 
 /* Workout detail */
-.back-link { align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
 .history { gap: var(--space-5); }
 .history__head { display: flex; flex-direction: column; gap: var(--space-1); }
 .history__head > * { margin: 0; }

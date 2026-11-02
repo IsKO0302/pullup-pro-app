@@ -7,3 +7,6 @@ playwright-report
 test-results
 *.log
 .DS_Store
+
+# local scratch scripts
+*.tmp.*

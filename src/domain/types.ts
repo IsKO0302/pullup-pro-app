@@ -188,6 +188,22 @@ export interface RecoveryDay extends EventStamp {
   reason: RecoveryReason | null;
 }
 
+export type ThoughtCategory =
+  | 'life' | 'time' | 'dreams' | 'discipline' | 'patience' | 'selfRespect' | 'growth' | 'sport'
+  | 'failure' | 'success' | 'hope' | 'innerStrength' | 'loneliness' | 'newBeginnings' | 'consistency';
+export const THOUGHT_CATEGORIES: readonly ThoughtCategory[] = [
+  'life', 'time', 'dreams', 'discipline', 'patience', 'selfRespect', 'growth', 'sport',
+  'failure', 'success', 'hope', 'innerStrength', 'loneliness', 'newBeginnings', 'consistency',
+];
+/** short: ≤ 7 words, poster-ready (thought of the day, rest timer). reflection: 2–4 sentences. */
+export type ThoughtFormat = 'short' | 'reflection';
+export interface Thought {
+  id: string;
+  category: ThoughtCategory;
+  format: ThoughtFormat;
+  text: Record<Lang, string>;
+}
+
 export interface ThoughtDay {
   localDate: LocalDate;
   thoughtId: string;

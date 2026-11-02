@@ -1,0 +1,64 @@
+.thoughts { display: flex; flex-direction: column; gap: var(--space-5); }
+.thoughts h1 { margin: 0; }
+
+.thought-hero {
+  display: flex; flex-direction: column; gap: var(--space-4);
+  padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface-1); color: var(--text); text-decoration: none;
+  transition: border-color var(--dur-ui) var(--ease);
+}
+.thought-hero:hover { border-color: var(--text-3); }
+.thought-hero__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); }
+.thought-hero__text {
+  font-family: var(--font-serif); font-weight: 600; font-size: 2.5rem; line-height: 2.75rem; letter-spacing: -0.005em;
+  overflow-wrap: break-word; hyphens: manual; padding: var(--space-3) 0 var(--space-2);
+}
+@media (max-width: 374px) { .thought-hero__text { font-size: 2.125rem; line-height: 2.4rem; } }
+
+.tabs { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: var(--space-1); border-bottom: 1px solid var(--border); margin: 0 calc(-1 * var(--space-2)); }
+.tabs__tab {
+  min-height: var(--tap); padding: 0 var(--space-3); background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  color: var(--text-2); font-size: 0.9375rem; font-weight: 500; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.tabs__tab:hover { color: var(--text); }
+.tabs__tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--silver); }
+
+.thoughts__panel { display: flex; flex-direction: column; gap: var(--space-3); }
+.thoughts__panel:focus-visible { outline-offset: 6px; }
+/* One scrollable row of topics, bleeding to the screen edges. */
+.thoughts__topics { margin: 0 calc(-1 * var(--space-5)); }
+.thoughts__topics .chips { flex-wrap: nowrap; overflow-x: auto; padding: 2px var(--space-5) 6px; scrollbar-width: none; scroll-padding: 0 var(--space-5); }
+.thoughts__topics .chips::-webkit-scrollbar { display: none; }
+.thoughts__topics .chip { flex: none; }
+@media (max-width: 374px) {
+  .thoughts__topics { margin: 0 calc(-1 * var(--space-4)); }
+  .thoughts__topics .chips { padding-left: var(--space-4); padding-right: var(--space-4); }
+}
+.thoughts__count { margin: 0; }
+
+.thought-list { list-style: none; margin: 0; padding: 0; }
+.thought-list li + li { border-top: 1px solid var(--border); }
+.thought-item { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0; color: var(--text); text-decoration: none; border-radius: 2px; }
+.thought-item__text { font-family: var(--font-serif); font-weight: 500; font-size: 1.375rem; line-height: 1.8rem; overflow-wrap: break-word; }
+.thought-item--reflection .thought-item__text { font-size: 1.125rem; line-height: 1.6rem; color: var(--text); }
+.thought-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--text-2); }
+.thought-item__meta .originals { font-size: 0.625rem; }
+.thought-item__fav { color: var(--silver); margin-left: auto; }
+.thought-item:hover .thought-item__text { color: var(--silver); }
+
+.thought-detail { display: flex; flex-direction: column; gap: var(--space-5); min-height: calc(100dvh - var(--nav-h) - var(--space-6)); }
+.thought-detail__body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); padding: var(--space-6) 0; }
+.thought-detail__body > * { margin: 0; }
+.thought-detail__text {
+  margin: 0; font-family: var(--font-serif); font-weight: 600; font-size: 2.75rem; line-height: 3rem; letter-spacing: -0.005em; overflow-wrap: break-word;
+}
+.thought-detail__text--reflection { font-size: 1.75rem; line-height: 2.3rem; font-weight: 500; }
+@media (max-width: 374px) {
+  .thought-detail__text { font-size: 2.25rem; line-height: 2.55rem; }
+  .thought-detail__text--reflection { font-size: 1.5rem; line-height: 2rem; }
+}
+.thought-detail__actions { display: flex; gap: var(--space-3); align-items: center; }
+.thought-detail__fav { border-color: var(--border); }
+.thought-detail__fav[aria-pressed='true'] { color: var(--silver); border-color: var(--silver); background: var(--surface-2); }
+
+.toast--info { border-color: var(--border); justify-content: center; }

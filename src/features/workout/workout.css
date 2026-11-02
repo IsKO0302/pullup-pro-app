@@ -33,6 +33,7 @@
 .rest__controls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); width: 100%; }
 .rest__skip { grid-column: 1 / -1; }
 .rest__next { margin: 0; color: var(--text-2); }
+.rest__thought { margin: var(--space-3) 0 0; max-width: 20em; font-family: var(--font-serif); font-weight: 500; font-size: 1.375rem; line-height: 1.8rem; color: var(--text-2); overflow-wrap: break-word; }
 
 .pause-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(8, 9, 11, 0.94); padding: var(--space-5); }
 .pause-overlay__inner { width: min(100%, calc(var(--column) - 2 * var(--space-5))); display: flex; flex-direction: column; gap: var(--space-3); text-align: center; }

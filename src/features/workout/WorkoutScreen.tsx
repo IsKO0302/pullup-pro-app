@@ -11,6 +11,7 @@ import {
   adjustRest, completeSet, currentExercise, doneSetCount, endRest, finishSession, hasStarted, holdElapsedSec, isFinished,
   pause, progressOf, replacePlan, restLeftSec, resume, skipSet, startHold, stopHold, swapExercise, swapOptions, toggleWarmup,
 } from '../../domain/session';
+import { restThoughtId, thoughtById } from '../../domain/thoughts';
 import type { ActiveSession, Profile } from '../../domain/types';
 import { Button, IconButton, ProgressBar, Ring, Sheet, Stepper, Switch } from '../../ui';
 import { clock, typeLabel, useExerciseText } from '../common/labels';
@@ -117,6 +118,8 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
   const training = session.plan.type !== 'light' && session.plan.type !== 'recovery';
   const lastOverall = session.exIndex === session.log.length - 1 && session.setIndex === ex.plannedSets - 1;
   const elapsedHold = holdElapsedSec(session, now);
+  // Rest time is where the thoughts live: a different short one for every rest of this session.
+  const restThought = resting ? thoughtById(restThoughtId(session.id, session.restCount - 1)) : null;
 
   const onSetDone = () => {
     if (sound) unlockAudio();
@@ -160,6 +163,7 @@ function Workout({ initial, profile, finishing }: { initial: ActiveSession; prof
             <Button variant="ghost" className="rest__skip" onClick={() => update(endRest)}>{t('workout.restSkip')}</Button>
           </div>
           <p className="rest__next">{t('workout.next', { name, i: session.setIndex + 1, n: ex.plannedSets })}</p>
+          {restThought && <p className="rest__thought" data-thought-id={restThought.id}>{restThought.text[lang]}</p>}
         </main>
       ) : (
         <main className="workout__body">

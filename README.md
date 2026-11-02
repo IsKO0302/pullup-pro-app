@@ -60,3 +60,4 @@ not contain it.
 - `DECISIONS.md` — non-obvious decisions.
 - `IDEAS.md` — everything deliberately left out of v1.
 - `CONTENT-REVIEW.md` — phrases that need review by a native speaker.
+- `src/data/thoughts.ts` — the 90 PULLUP PRO ORIGINALS (EN/RU/TR); rules in `src/data/thoughts.test.ts`.

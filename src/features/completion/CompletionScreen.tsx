@@ -3,6 +3,7 @@ import { useI18n } from '../../app/i18n';
 import { navigate } from '../../app/router';
 import { useStore } from '../../app/store';
 import { recordsOf } from '../../domain/stats';
+import { completionThoughtId, thoughtById } from '../../domain/thoughts';
 import type { CompletedWorkout, Mood } from '../../domain/types';
 import { Button, Chip } from '../../ui';
 import { typeLabel, useExerciseText } from '../common/labels';
@@ -23,11 +24,12 @@ export function CompletionScreen({ id }: { id: string }) {
 
 /** Quiet and real: only numbers that were logged, records only when there was a previous best. */
 function Completion({ workout: w }: { workout: CompletedWorkout }) {
-  const { t, num, upper } = useI18n();
+  const { t, num, upper, lang } = useI18n();
   const { data, actions } = useStore();
   const text = useExerciseText();
   const [note, setNote] = useState(w.note);
   const records = useMemo(() => recordsOf(w, data.workouts, data.maxEntries), [w, data.workouts, data.maxEntries]);
+  const thought = thoughtById(completionThoughtId(w.id));
 
   const saveNote = async () => {
     const clean = note.trim();
@@ -83,6 +85,13 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
           onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         />
       </label>
+
+      {thought && (
+        <figure className="done__thought" data-thought-id={thought.id}>
+          <blockquote>{thought.text[lang]}</blockquote>
+          <figcaption className="originals">{t('thoughts.originals')}</figcaption>
+        </figure>
+      )}
 
       <div className="done__actions">
         <Button variant="primary" size="xl" block onClick={() => void done()}>{t('done.finish')}</Button>

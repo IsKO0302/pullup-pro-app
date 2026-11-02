@@ -103,3 +103,15 @@ Changing days per week records `{ from, daysPerWeek }`; the week strip, the rhyt
 
 ### D31 · Demo data only through a guarded dev/e2e hook
 `window.__pullupTest.seedDemo()` exists only in dev/e2e builds on a non-default database, refuses `pullup-pro` itself (unit-tested), and writes through the same atomic `replaceAll` that import will use.
+
+### D32 · Thought of the day: short format only, pinned per local date
+`hash(YYYY-MM-DD + fixed salt)` picks among the 60 short thoughts not shown in the previous 30 days; the pick is stored in `thoughtDays` the first time it is shown, so it stays identical all local day (reloads, library edits, algorithm changes) and tomorrow's pick can avoid it. It switches at local midnight through `useToday` (timer at 00:00:02 + visibility check). Days the app was not opened have no pin — nothing was shown, so there is nothing to avoid. Reflections are browsable and shareable but not daily: TODAY needs one short line.
+
+### D33 · Rest and completion thoughts are derived, not stored
+Rest: a seeded shuffle (per session id) of the 20 short thoughts in sport / discipline / patience / consistency / inner strength, indexed by the rest number → a different thought for every rest and the same one after a reload. Completion: one short thought from growth / success / consistency / patience / inner strength / self-respect, hashed from the workout id → the same when the screen is reopened.
+
+### D34 · Favorites and recently viewed
+Favorites: newest first, toggled with one tap (no confirmation — it is undoable). Recently viewed = thoughts opened in the detail view, newest first, de-duplicated, at most 30. Ids that no longer exist in the library are skipped, so content edits can never break a list.
+
+### D35 · Share a thought without a poster
+Web Share with text when available; otherwise copy to the clipboard with a quiet "Copied" status. If neither exists the button is not shown. "Make poster" is added in phase 7 together with the real poster (no placeholder). Content uses typographic apostrophes and quotes (’ « » “ ”), enforced by the library test, because the same text goes onto posters.
