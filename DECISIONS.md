@@ -43,3 +43,12 @@ Rejected: `#7B828C` (spec suggestion) — 4.16:1 on `--surface-3`.
 
 ### D11 · Fonts: Inter Tight Variable (UI) + Cormorant Garamond 500/600 (quotes), self-hosted via @fontsource
 Only Latin, Latin-Extended (Turkish ı İ ş ğ) and Cyrillic (ё Ё) subsets are imported for Cormorant; Inter Tight's variable CSS covers all subsets with unicode-range. Glyph coverage was checked on the dev page `#/glyphs` (screenshot). Cormorant digits are old-style, so all numbers use Inter Tight with tabular figures.
+
+### D12 · Schema v2 adds `thoughtDays` and backfills `workouts.timeZone`
+The thought of the day is pinned per local date (guardrail 7), so it gets its own store keyed by `localDate`. Added as a real migration (v1 → v2) instead of editing v1, and the test opens a v1 database with records, upgrades it and checks every record survived.
+
+### D13 · Store writes are serialised and applied to memory only after IndexedDB confirms
+Every action is queued; the in-memory state changes only after the transaction committed. If a write fails the UI keeps the previous (true) state and shows a calm toast. Slower by a few milliseconds, but the screen never shows data that is not on disk.
+
+### D14 · First-launch steps are persisted in `profile.onboarding`
+Closing the app in the middle of the setup resumes on the same step. "Skip" keeps whatever is stored (the defaults unless the user went back); a skipped pull-up question stores no max entry, which the engine treats as level 0 (the most conservative start).

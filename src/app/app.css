@@ -2,3 +2,26 @@
 .app--nav { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-4)); }
 .screen-pad { max-width: var(--column); margin: 0 auto; padding: var(--space-5) var(--space-5) var(--space-6); }
 @media (max-width: 374px) { .screen-pad { padding-left: var(--space-4); padding-right: var(--space-4); } }
+
+.splash { min-height: 100dvh; display: grid; place-items: center; color: var(--text-3); opacity: 0; animation: splash-in 400ms var(--ease) 300ms forwards; }
+@keyframes splash-in { to { opacity: 1; } }
+.fatal { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-3));
+  transform: translateX(-50%);
+  width: min(calc(100% - 2 * var(--space-4)), calc(var(--column) - 2 * var(--space-4)));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  background: var(--surface-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  z-index: 50;
+}
+.toast p { margin: 0; flex: 1; }
+.you__section { margin-top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-3); }

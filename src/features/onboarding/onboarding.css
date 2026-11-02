@@ -1,0 +1,108 @@
+/* First launch: language → welcome → 3 setup screens. */
+.lang {
+  min-height: 100dvh;
+  max-width: var(--column);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-6);
+  padding: var(--space-7) var(--space-5);
+}
+.lang__brand { color: var(--text-3); }
+.lang__title { font-size: 15px; font-weight: 500; letter-spacing: 0.02em; color: var(--text-2); margin: 0; }
+.lang__options { display: grid; gap: var(--space-3); }
+.lang__option {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  color: var(--text);
+  font: 500 22px/1.2 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-ui) var(--ease), background var(--dur-ui) var(--ease);
+}
+.lang__option:hover { border-color: var(--silver); }
+.lang__option:active { background: var(--surface-2); }
+.lang__option svg { color: var(--text-3); }
+
+.welcome {
+  min-height: 100dvh;
+  max-width: var(--column);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-7) var(--space-5) 0;
+}
+.welcome__text { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: var(--space-5); }
+.welcome__line {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(20px, 5.4vw, 25px);
+  line-height: 1.38;
+  color: var(--text);
+  opacity: 0;
+  animation: welcome-line 1400ms var(--ease) forwards;
+}
+.welcome__line--motto {
+  margin: var(--space-4) 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--silver);
+}
+.welcome__foot {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-5) 0 calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 35%);
+}
+.welcome__cta { opacity: 0; animation: welcome-line 900ms var(--ease) 2200ms forwards; }
+@keyframes welcome-line {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome__line, .welcome__cta { animation: none; opacity: 1; }
+}
+
+.setup {
+  min-height: 100dvh;
+  max-width: var(--column);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-5) 0;
+}
+.setup__top { display: grid; grid-template-columns: var(--tap) 1fr auto; align-items: center; min-height: var(--tap); }
+.setup__step { text-align: center; color: var(--text-3); }
+.setup__dots { display: flex; gap: 6px; justify-content: center; margin-top: var(--space-2); }
+.setup__dot { width: 28px; height: 3px; border-radius: 2px; background: var(--surface-3); }
+.setup__dot.is-on { background: var(--silver); }
+.setup__body { flex: 1; display: flex; flex-direction: column; gap: var(--space-4); padding-top: var(--space-6); }
+.setup__title { margin: 0; outline: none; }
+.setup__help { margin: 0; color: var(--text-2); }
+.setup__control { margin-top: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
+.setup__note { color: var(--text-2); min-height: 3em; text-align: center; margin: 0; }
+.setup__group { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
+.setup__label { margin: 0; font-size: 14px; color: var(--text-2); }
+.setup__foot {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-5) 0 calc(var(--space-4) + env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 30%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.setup__hint { text-align: center; color: var(--text-3); margin: 0; }
+.setup__days .chips--grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.setup__minutes .chips--grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.setup__days .chip, .setup__minutes .chip { padding-left: 0; padding-right: 0; justify-content: center; }
