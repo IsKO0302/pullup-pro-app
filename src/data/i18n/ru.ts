@@ -400,6 +400,10 @@ export const ru: Dictionary = {
   'poster.ready': 'Изображение сохранено.',
   'poster.error': 'Не удалось создать изображение. Попробуй снова или выбери другой формат.',
   'poster.preview': 'Предпросмотр постера',
+  'poster.formatStory': '9:16 · Сторис',
+  'poster.formatPost': '4:5 · Пост',
+  'poster.withResult': 'Показать результат тренировки',
+  'poster.shared': 'Отправлено.',
 
   'you.title': 'Ты',
   'you.profile': 'Профиль',
@@ -517,4 +521,8 @@ export const ru: Dictionary = {
   'plural.thoughts.few': '{n} мысли',
   'plural.thoughts.many': '{n} мыслей',
   'plural.thoughts.other': '{n} мысли',
+  'plural.pullups.one': '{n} подтягивание',
+  'plural.pullups.few': '{n} подтягивания',
+  'plural.pullups.many': '{n} подтягиваний',
+  'plural.pullups.other': '{n} подтягивания',
 };

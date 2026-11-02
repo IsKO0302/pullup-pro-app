@@ -15,6 +15,7 @@ import { useStore } from './store';
 // Charts and history are code-split: TODAY and the workout stay in the first bundle.
 const ProgressPage = lazy(() => import('../features/progress/ProgressPage'));
 const ThoughtsPage = lazy(() => import('../features/thoughts/ThoughtsPage'));
+const PosterPage = lazy(() => import('../features/poster/PosterPage'));
 
 const TABS = ['today', 'progress', 'thoughts', 'you'] as const;
 type Tab = (typeof TABS)[number];
@@ -28,7 +29,7 @@ export function Shell({ route }: { route: string[] }) {
   const tab: Tab = isTab(page) ? page : 'today';
 
   useEffect(() => {
-    const name = page === 'workout' ? t('workout.progress') : page === 'done' ? t('done.title') : t(`nav.${tab}`);
+    const name = page === 'workout' ? t('workout.progress') : page === 'done' ? t('done.title') : page === 'poster' ? t('poster.title') : t(`nav.${tab}`);
     document.title = profile?.onboarding === 'done' ? `${name} · PULLUP PRO` : 'PULLUP PRO';
   }, [t, tab, page, profile?.onboarding]);
 
@@ -38,6 +39,17 @@ export function Shell({ route }: { route: string[] }) {
   // Full-screen moments: no bottom navigation.
   if (page === 'workout') return <div className="app"><WorkoutScreen /></div>;
   if (page === 'done' && route[1]) return <div className="app"><main><CompletionScreen id={route[1]} /></main></div>;
+  if (page === 'poster') {
+    return (
+      <div className="app">
+        <main>
+          <Suspense fallback={<div className="screen-pad"><Skeleton height={320} /></div>}>
+            <PosterPage thoughtId={route[1]} workoutId={route[2]} />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
 
   const icon = (node: ReactNode) => node;
   const items: NavItem[] = [

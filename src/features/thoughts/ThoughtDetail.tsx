@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Share2 } from 'lucide-react';
+import { ArrowLeft, Heart, Image, Share2 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useI18n } from '../../app/i18n';
 import { navigate } from '../../app/router';
@@ -96,6 +96,9 @@ function Detail({ thought }: { thought: Thought }) {
         >
           <Heart size={22} strokeWidth={1.5} fill={favorite ? 'currentColor' : 'none'} aria-hidden />
         </IconButton>
+        <Button icon={<Image size={18} strokeWidth={1.5} aria-hidden />} onClick={() => navigate(`poster/${encodeURIComponent(thought.id)}`)}>
+          {t('thoughts.makePoster')}
+        </Button>
         {(canShare() || canCopy()) && (
           <Button icon={<Share2 size={18} strokeWidth={1.5} aria-hidden />} onClick={() => void share()}>{t('thoughts.share')}</Button>
         )}

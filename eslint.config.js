@@ -9,7 +9,7 @@ const pureLayer = (message, extra = []) => ({
 });
 
 export default defineConfig(
-  { ignores: ['dist', 'dist-e2e', 'dev-dist', 'coverage', 'node_modules', 'playwright-report', 'test-results'] },
+  { ignores: ['**/*.tmp.*', 'dist', 'dist-e2e', 'dev-dist', 'coverage', 'node_modules', 'playwright-report', 'test-results'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

@@ -400,6 +400,10 @@ export const tr: Dictionary = {
   'poster.ready': 'Görsel kaydedildi.',
   'poster.error': 'Görsel oluşturulamadı. Tekrar dene ya da diğer formatı seç.',
   'poster.preview': 'Poster önizlemesi',
+  'poster.formatStory': '9:16 · Hikâye',
+  'poster.formatPost': '4:5 · Gönderi',
+  'poster.withResult': 'Antrenman sonucunu göster',
+  'poster.shared': 'Paylaşıldı.',
 
   'you.title': 'Sen',
   'you.profile': 'Profil',
@@ -517,4 +521,8 @@ export const tr: Dictionary = {
   'plural.thoughts.few': '{n} düşünce',
   'plural.thoughts.many': '{n} düşünce',
   'plural.thoughts.other': '{n} düşünce',
+  'plural.pullups.one': '{n} barfiks',
+  'plural.pullups.few': '{n} barfiks',
+  'plural.pullups.many': '{n} barfiks',
+  'plural.pullups.other': '{n} barfiks',
 };

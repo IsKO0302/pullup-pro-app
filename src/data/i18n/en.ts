@@ -399,6 +399,10 @@ export const en = {
   'poster.ready': 'Image saved.',
   'poster.error': 'The image could not be created. Try again or choose the other format.',
   'poster.preview': 'Poster preview',
+  'poster.formatStory': '9:16 · Story',
+  'poster.formatPost': '4:5 · Post',
+  'poster.withResult': 'Show the workout result',
+  'poster.shared': 'Shared.',
 
   'you.title': 'You',
   'you.profile': 'Profile',
@@ -516,6 +520,10 @@ export const en = {
   'plural.thoughts.few': '{n} thoughts',
   'plural.thoughts.many': '{n} thoughts',
   'plural.thoughts.other': '{n} thoughts',
+  'plural.pullups.one': '{n} pull-up',
+  'plural.pullups.few': '{n} pull-ups',
+  'plural.pullups.many': '{n} pull-ups',
+  'plural.pullups.other': '{n} pull-ups',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -36,6 +36,10 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
     if (clean !== w.note) await actions.updateWorkout({ ...w, note: clean });
   };
   const setMood = (m: Mood) => void actions.updateWorkout({ ...w, mood: w.mood === m ? null : m });
+  const sharePoster = async (thoughtId: string) => {
+    await saveNote();
+    navigate(`poster/${encodeURIComponent(thoughtId)}/${encodeURIComponent(w.id)}`);
+  };
   const done = async () => {
     await saveNote();
     navigate('today', { replace: true });
@@ -95,6 +99,7 @@ function Completion({ workout: w }: { workout: CompletedWorkout }) {
 
       <div className="done__actions">
         <Button variant="primary" size="xl" block onClick={() => void done()}>{t('done.finish')}</Button>
+        {thought && <Button variant="secondary" block onClick={() => void sharePoster(thought.id)}>{t('done.share')}</Button>}
       </div>
     </div>
   );

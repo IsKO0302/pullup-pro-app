@@ -115,3 +115,15 @@ Favorites: newest first, toggled with one tap (no confirmation — it is undoabl
 
 ### D35 · Share a thought without a poster
 Web Share with text when available; otherwise copy to the clipboard with a quiet "Copied" status. If neither exists the button is not shown. "Make poster" is added in phase 7 together with the real poster (no placeholder). Content uses typographic apostrophes and quotes (’ « » “ ”), enforced by the library test, because the same text goes onto posters.
+
+### D36 · Posters are drawn on a canvas at 2× with a pure, tested layout
+The layout (`features/poster/layout.ts`) is pure: it receives a `measure` function, so the same code is unit-tested with a deliberately wide fake font and run in the browser with `ctx.measureText` and the loaded fonts. It picks the largest size at which every word fits the width, the block fits the height and short thoughts stay within 5–6 lines, then balances the lines. Words are never broken except in an emergency path no shipped text reaches (tested over the whole library with the real fonts).
+
+### D37 · Typographic line-break rules per language
+A dash stays at the end of the previous line (Russian convention); Russian and English one- and two-letter words travel with the next word ("с другими", "a year"); Turkish enclitics *de / da / mi* stay with the word before ("Ben de."). Short thoughts are upper-cased only in Pure Black, with `toLocaleUpperCase('tr-TR')` for Turkish (i → İ).
+
+### D38 · Completion posters may carry one real result line
+From the completion screen the poster can show "DATE · N PULL-UPS" (or reps / minutes when there were no pull-ups), taken from the saved workout — never estimated. A switch removes it; posters opened from THOUGHTS never have it. The only branding is the small "PULLUP PRO" mark.
+
+### D39 · Share an image when the device can, otherwise save it
+The button says "Share image" only if `navigator.canShare({ files })` is true, otherwise "Save image" (download). A cancelled share is silent; any other share error falls back to saving the file. No button is shown that cannot do what it says.

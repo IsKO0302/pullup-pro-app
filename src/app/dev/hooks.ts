@@ -9,7 +9,11 @@ import { demoData, type DemoOptions } from './demo';
 
 declare global {
   interface Window {
-    __pullupTest?: { seedDemo: (opts: Partial<DemoOptions> & { today: string }) => Promise<void> };
+    __pullupTest?: {
+      seedDemo: (opts: Partial<DemoOptions> & { today: string }) => Promise<void>;
+      /** Lays out every thought on every poster variant with the real fonts; returns misfits. */
+      posterSweep: () => Promise<string[]>;
+    };
   }
 }
 
@@ -24,6 +28,10 @@ export function installTestHooks(getDb: () => IDBDatabase | null, reload: () => 
       await replaceAll(db, data);
       if (data.profile) storeLang(data.profile.lang);
       await reload();
+    },
+    async posterSweep() {
+      const { sweepPosters } = await import('../../features/poster/sweep');
+      return sweepPosters();
     },
   };
 }
